@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resto.admin</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0a; color: #e8e8e4; min-height: 100vh; font-size: 14px; }
+
+    /* ── Topbar ── */
+    .topbar { background: #111110; border-bottom: 0.5px solid #2a2a28; padding: 0 28px; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+    .brand { font-size: 15px; font-weight: 500; color: #e8e8e4; letter-spacing: -0.2px; }
+    .brand span { color: #c97848; }
+    .admin-pill { display: flex; align-items: center; gap: 6px; background: #1a1a3a; border: 0.5px solid #2a2a5a; border-radius: 20px; padding: 4px 10px; }
+    .admin-pill-dot { width: 6px; height: 6px; background: #7a78cf; border-radius: 50%; }
+    .admin-pill-text { font-size: 11px; color: #7a78cf; font-weight: 600; letter-spacing: 0.5px; }
+    .topbar-left { display: flex; align-items: center; gap: 14px; }
+    .topbar-right { display: flex; align-items: center; gap: 8px; }
+    .tb-divider { width: 0.5px; height: 18px; background: #2a2a28; }
+    .btn-logout { background: transparent; border: 0.5px solid #3a2a28; color: #9a6a5a; padding: 7px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; transition: background .15s; font-family: inherit; }
+    .btn-logout:hover { background: #2a1a18; }
+
+    /* ── Login ── */
+    .login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
+    .login-box { background: #111110; border-radius: 16px; padding: 40px; width: 100%; max-width: 380px; border: 0.5px solid #2a2a28; }
+    .login-logo { font-size: 28px; font-weight: 500; color: #e8e8e4; margin-bottom: 4px; letter-spacing: -1px; }
+    .login-logo span { color: #c97848; }
+    .login-badge { display: inline-flex; align-items: center; gap: 6px; background: #1a1a3a; border: 0.5px solid #2a2a5a; border-radius: 20px; padding: 4px 12px; margin-bottom: 28px; }
+    .login-badge span { font-size: 11px; color: #7a78cf; font-weight: 600; letter-spacing: 0.5px; }
+    label { font-size: 11px; color: #5a5a57; font-weight: 500; letter-spacing: 0.3px; display: block; margin-bottom: 6px; text-transform: uppercase; }
+    input, select { width: 100%; background: #0e0e0d; border: 0.5px solid #2a2a28; border-radius: 8px; padding: 11px 14px; color: #e8e8e4; font-size: 14px; margin-bottom: 16px; outline: none; font-family: inherit; transition: border-color .15s; }
+    input:focus, select:focus { border-color: #c97848; }
+    .btn-primary { width: 100%; background: #c97848; border: none; color: #1a0e08; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background .15s; }
+    .btn-primary:hover { background: #b86a38; }
+    .login-hint { font-size: 12px; color: #3a3a38; margin-top: 14px; text-align: center; }
+
+    /* ── Layout ── */
+    .layout { display: grid; grid-template-columns: 200px 1fr; min-height: calc(100vh - 56px); }
+    .sidebar { background: #0e0e0d; border-right: 0.5px solid #2a2a28; padding: 20px 0; }
+    .sidebar-section { padding: 0 12px; margin-bottom: 24px; }
+    .sidebar-label { font-size: 10px; color: #4a4a47; font-weight: 500; letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 8px; padding: 0 8px; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 7px; color: #6a6a67; cursor: pointer; font-size: 13px; transition: background .1s, color .1s; margin-bottom: 2px; user-select: none; }
+    .nav-item i { font-size: 16px; }
+    .nav-item:hover { background: #1a1a18; color: #c8c8c4; }
+    .nav-item.active { background: #1e1a14; color: #c97848; }
+    .nav-badge { margin-left: auto; background: #c97848; color: #1a0e08; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 10px; }
+    .nav-badge-purple { margin-left: auto; background: #2e2a4a; color: #a898df; font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 10px; }
+
+    .content { padding: 28px 32px; overflow-y: auto; }
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* ── Page header ── */
+    .page-header { margin-bottom: 24px; display: flex; align-items: flex-start; justify-content: space-between; }
+    .page-title { font-size: 20px; font-weight: 500; color: #e8e8e4; letter-spacing: -0.3px; }
+    .page-sub { font-size: 13px; color: #5a5a57; margin-top: 3px; }
+    .btn-add { background: #c97848; border: none; color: #1a0e08; padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background .15s; font-family: inherit; }
+    .btn-add:hover { background: #b86a38; }
+    .btn-add i { font-size: 15px; }
+
+    /* ── Stats ── */
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+    .stat { background: #111110; border: 0.5px solid #2a2a28; border-radius: 10px; padding: 16px 18px; }
+    .stat.hi-orange { border-color: #3a2818; background: #130f0a; }
+    .stat.hi-purple { border-color: #2e2a4a; background: #0e0c1a; }
+    .stat.hi-green  { border-color: #1a3a1a; background: #0a1a0a; }
+    .stat-label { font-size: 11px; color: #5a5a57; font-weight: 500; letter-spacing: 0.3px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+    .stat-label i { font-size: 14px; }
+    .stat-value { font-size: 28px; font-weight: 500; letter-spacing: -0.5px; }
+    .stat-sub { font-size: 11px; color: #4a4a47; margin-top: 4px; }
+    .c-orange { color: #c97848; }
+    .c-purple { color: #8a78cf; }
+    .c-green  { color: #4a9a6a; }
+    .c-red    { color: #c05a5a; }
+    .c-muted  { color: #5a5a57; }
+
+    /* ── Toolbar ── */
+    .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .search-wrap { position: relative; flex: 1; max-width: 300px; }
+    .search-wrap i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #4a4a47; font-size: 14px; pointer-events: none; }
+    .search-input { padding: 9px 12px 9px 36px; background: #111110; border: 0.5px solid #2a2a28; border-radius: 8px; color: #e8e8e4; font-size: 13px; outline: none; width: 100%; margin-bottom: 0; transition: border-color .15s; }
+    .search-input:focus { border-color: #c97848; }
+    .filter-select { background: #111110; border: 0.5px solid #2a2a28; border-radius: 8px; color: #8a8a86; padding: 9px 12px; font-size: 13px; outline: none; cursor: pointer; margin-bottom: 0; width: auto; }
+    .filter-select:focus { border-color: #c97848; }
+
+    /* ── Resto cards grid ── */
+    .restos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+    .resto-card { background: #111110; border: 0.5px solid #2a2a28; border-radius: 14px; overflow: hidden; transition: border-color .15s; }
+    .resto-card:hover { border-color: #3a3a38; }
+    .resto-card.is-closed { opacity: 0.7; }
+    .rc-img-wrap { position: relative; height: 130px; overflow: hidden; }
+    .rc-img { width: 100%; height: 100%; object-fit: cover; }
+    .rc-img-placeholder { width: 100%; height: 100%; background: #1a1a18; display: flex; align-items: center; justify-content: center; color: #3a3a38; font-size: 32px; }
+    .rc-status-badge { position: absolute; top: 10px; right: 10px; display: flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 600; }
+    .rc-status-badge.open { background: rgba(0,0,0,0.6); border: 0.5px solid rgba(74,154,74,0.5); color: #4a9a6a; }
+    .rc-status-badge.closed { background: rgba(0,0,0,0.6); border: 0.5px solid rgba(192,90,90,0.5); color: #c05a5a; }
+    .rc-status-dot { width: 5px; height: 5px; border-radius: 50%; }
+    .open .rc-status-dot { background: #4a9a6a; }
+    .closed .rc-status-dot { background: #c05a5a; }
+    .rc-cat-tag { position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.65); border: 0.5px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 3px 8px; font-size: 11px; color: #a8a8a4; }
+    .rc-body { padding: 14px 16px; }
+    .rc-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+    .rc-name { font-size: 15px; font-weight: 600; color: #e8e8e4; }
+    .rc-id { font-size: 10px; color: #3a3a38; margin-top: 2px; font-family: monospace; }
+    .rc-desc { font-size: 12px; color: #5a5a57; line-height: 1.45; margin-bottom: 10px; min-height: 28px; }
+    .rc-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .rc-meta-pill { background: #1a1a18; border: 0.5px solid #2a2a28; border-radius: 6px; padding: 3px 8px; font-size: 11px; color: #6a6a67; display: flex; align-items: center; gap: 4px; }
+    .rc-meta-pill i { font-size: 12px; }
+    .rc-footer { display: flex; gap: 6px; padding: 10px 16px 14px; border-top: 0.5px solid #1a1a18; }
+    .rc-edit-btn { flex: 1; background: #1a1a18; border: 0.5px solid #2a2a28; color: #8a8a86; padding: 7px 0; border-radius: 7px; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 5px; transition: all .15s; font-family: inherit; }
+    .rc-edit-btn:hover { border-color: #c97848; color: #c97848; background: #1e1a14; }
+    .rc-open-btn { background: #0e1e0e; border: 0.5px solid #1a3a1a; color: #4a9a4a; padding: 7px 12px; border-radius: 7px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 4px; transition: all .15s; font-family: inherit; }
+    .rc-open-btn.closed-state { background: #1a0e0e; border-color: #3a1818; color: #c05a5a; }
+    .rc-open-btn:hover { opacity: 0.8; }
+    .rc-del-btn { background: #1a0e0e; border: 0.5px solid #2a1818; color: #8a4a4a; padding: 7px 10px; border-radius: 7px; cursor: pointer; font-size: 12px; display: flex; align-items: center; transition: all .15s; font-family: inherit; }
+    .rc-del-btn:hover { border-color: #c05a5a; color: #c05a5a; background: #2a0e0e; }
+    .rc-del-btn i { font-size: 14px; }
+
+    /* ── Section header ── */
+    .section-header { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+    .section-title { font-size: 13px; font-weight: 500; color: #5a5a57; }
+    .section-count { background: #1e1e1c; border: 0.5px solid #2a2a28; color: #6a6a67; font-size: 11px; padding: 2px 7px; border-radius: 10px; }
+
+    /* ── Orders table (overview) ── */
+    .orders-table-wrap { background: #111110; border: 0.5px solid #2a2a28; border-radius: 12px; overflow: hidden; }
+    .orders-table { width: 100%; border-collapse: collapse; }
+    .orders-table th { background: #0e0e0d; padding: 10px 16px; text-align: left; font-size: 11px; color: #4a4a47; font-weight: 500; letter-spacing: 0.3px; text-transform: uppercase; border-bottom: 0.5px solid #1e1e1c; }
+    .orders-table td { padding: 11px 16px; font-size: 13px; color: #a8a8a4; border-bottom: 0.5px solid #1a1a18; vertical-align: middle; }
+    .orders-table tr:last-child td { border-bottom: none; }
+    .orders-table tr:hover td { background: #141412; }
+    .status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 6px; font-size: 11px; font-weight: 500; }
+    .s-pending   { background: #2a1e0e; color: #c97848; border: 0.5px solid #3a2818; }
+    .s-preparing { background: #0e1a28; color: #4a8abf; border: 0.5px solid #1e3040; }
+    .s-on_the_way{ background: #1a0e2a; color: #8a78cf; border: 0.5px solid #2a1a3a; }
+    .s-delivered { background: #0e1e14; color: #4a9a6a; border: 0.5px solid #1a3022; }
+    .s-refused   { background: #2a0e0e; color: #c05a5a; border: 0.5px solid #3a1818; }
+    .resto-tag { background: #1e1a14; border: 0.5px solid #3a2818; color: #c97848; font-size: 11px; padding: 2px 8px; border-radius: 5px; font-weight: 500; }
+
+    /* ── Modals ── */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 999; align-items: center; justify-content: center; padding: 20px; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: #111110; border-radius: 14px; padding: 28px; width: 100%; max-width: 540px; border: 0.5px solid #2a2a28; max-height: 90vh; overflow-y: auto; }
+    .modal-title { font-size: 16px; font-weight: 500; color: #e8e8e4; margin-bottom: 4px; }
+    .modal-sub { color: #5a5a57; font-size: 13px; margin-bottom: 22px; }
+    .modal input, .modal select, .modal textarea { width: 100%; background: #0e0e0d; border: 0.5px solid #2a2a28; border-radius: 8px; padding: 10px 14px; color: #e8e8e4; font-size: 14px; margin-bottom: 14px; outline: none; font-family: inherit; transition: border-color .15s; }
+    .modal input:focus, .modal select:focus, .modal textarea:focus { border-color: #c97848; }
+    .modal textarea { resize: vertical; min-height: 70px; }
+    .modal-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+    .modal-row > div { display: flex; flex-direction: column; }
+    .modal-row label { margin-bottom: 6px; }
+    .modal-row input, .modal-row select { margin-bottom: 0; }
+    .modal-field { margin-bottom: 14px; }
+    .modal-field label { margin-bottom: 6px; }
+    .modal-field input, .modal-field select, .modal-field textarea { margin-bottom: 0; }
+    .modal-actions { display: flex; gap: 8px; margin-top: 18px; }
+    .btn-cancel { flex: 1; background: transparent; border: 0.5px solid #2a2a28; color: #6a6a67; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 13px; font-family: inherit; transition: background .15s; }
+    .btn-cancel:hover { background: #1a1a18; }
+    .img-preview-wrap { margin-top: 8px; margin-bottom: 14px; }
+    .img-preview { width: 100%; height: 110px; object-fit: cover; border-radius: 8px; border: 0.5px solid #2a2a28; display: none; }
+    .img-preview.visible { display: block; }
+    .modal-divider { border: none; border-top: 0.5px solid #1e1e1c; margin: 16px 0; }
+    .modal-avail-row { display: flex; align-items: center; justify-content: space-between; background: #0e0e0d; border: 0.5px solid #2a2a28; border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; }
+    .modal-avail-label { font-size: 13px; color: #8a8a86; }
+    .modal-avail-label span { display: block; font-size: 11px; color: #4a4a47; margin-top: 2px; }
+    .toggle-switch { position: relative; display: inline-block; width: 40px; height: 22px; flex-shrink: 0; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider { position: absolute; cursor: pointer; inset: 0; background: #2a2a28; border-radius: 22px; transition: background .2s; }
+    .toggle-slider:before { content: ''; position: absolute; width: 16px; height: 16px; left: 3px; bottom: 3px; background: #6a6a67; border-radius: 50%; transition: transform .2s, background .2s; }
+    .toggle-switch input:checked + .toggle-slider { background: #1a3a1a; }
+    .toggle-switch input:checked + .toggle-slider:before { transform: translateX(18px); background: #4a9a4a; }
+
+    /* ── Delete confirm modal ── */
+    .delete-modal-body { background: #1a0808; border: 0.5px solid #3a1818; border-radius: 10px; padding: 16px; margin-bottom: 6px; display: flex; align-items: center; gap: 12px; }
+    .delete-modal-icon { font-size: 24px; color: #c05a5a; flex-shrink: 0; }
+    .delete-modal-name { font-size: 15px; font-weight: 600; color: #e8e8e4; }
+    .delete-modal-warn { font-size: 12px; color: #8a4a4a; margin-top: 4px; }
+    .act-refuse { background: #2a0e0e; border: 0.5px solid #3a1818; color: #c05a5a; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 6px; flex: 1; font-family: inherit; transition: background .15s; }
+    .act-refuse:hover { background: #3a0e0e; }
+
+    /* ── Info box ── */
+    .info-box { background: #0e1a28; border: 0.5px solid #1e3040; border-radius: 10px; padding: 14px 16px; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 10px; }
+    .info-box i { color: #4a8abf; font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+    .info-box-text { font-size: 12px; color: #4a7a9a; line-height: 1.55; }
+    .info-box-text strong { color: #6a9abf; }
+
+    /* ── Password badge field ── */
+    .password-row { display: flex; align-items: center; gap: 8px; background: #0e0e0d; border: 0.5px solid #2a2a28; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; }
+    .password-val { font-family: monospace; font-size: 16px; color: #c97848; letter-spacing: 2px; flex: 1; }
+    .password-hint { font-size: 11px; color: #4a4a47; }
+
+    /* ── Empty ── */
+    .empty { text-align: center; padding: 60px 0; color: #3a3a38; }
+    .empty i { font-size: 36px; margin-bottom: 12px; display: block; }
+    .empty p { font-size: 14px; }
+    .empty small { font-size: 12px; color: #2a2a28; display: block; margin-top: 6px; }
+
+    /* ── Toast ── */
+    .toast { position: fixed; bottom: 28px; right: 28px; background: #1e1e1c; border: 0.5px solid #3a3a38; border-radius: 10px; padding: 12px 18px; font-size: 13px; color: #e8e8e4; z-index: 9999; display: flex; align-items: center; gap: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); transform: translateY(20px); opacity: 0; transition: all .25s; pointer-events: none; }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success i { color: #4a9a6a; }
+    .toast.error   i { color: #c05a5a; }
+
+    /* ── Realtime badge ── */
+    .live-pill { display: flex; align-items: center; gap: 6px; background: #1a2e1a; border: 0.5px solid #2a4a2a; border-radius: 20px; padding: 4px 10px; }
+    .live-dot { width: 6px; height: 6px; background: #4a9a4a; border-radius: 50%; animation: blink 2s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    .live-text { font-size: 11px; color: #4a9a4a; font-weight: 500; letter-spacing: 0.3px; }
+
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .content { padding: 20px 16px; }
+      .restos-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="toast" id="toast"><i class="ti ti-check"></i><span id="toast-msg"></span></div>
+
+<!-- Modal: Ajouter / Modifier resto -->
+<div class="modal-overlay" id="resto-modal">
+  <div class="modal">
+    <div class="modal-title" id="resto-modal-title">Ajouter un restaurant</div>
+    <div class="modal-sub" id="resto-modal-sub">Il apparaîtra immédiatement dans l'app et dans le dashboard des restos.</div>
+
+    <div class="modal-field">
+      <label>Nom du restaurant *</label>
+      <input type="text" id="r-name" placeholder="Ex : Shawarma Beirut" />
+    </div>
+    <div class="modal-field">
+      <label>Description</label>
+      <textarea id="r-desc" placeholder="Ex : Le meilleur shawarma de la ville..."></textarea>
+    </div>
+    <div class="modal-row">
+      <div>
+        <label>Catégorie *</label>
+        <select id="r-category">
+          <option value="">— Choisir —</option>
+          <option value="Burgers">🍔 Burgers</option>
+          <option value="Shawarma">🌯 Shawarma</option>
+          <option value="Pizza">🍕 Pizza</option>
+          <option value="Healthy">🥗 Healthy</option>
+          <option value="Sushi">🍣 Sushi</option>
+          <option value="Grillades">🥩 Grillades</option>
+        </select>
+      </div>
+      <div>
+        <label>Temps de livraison</label>
+        <input type="text" id="r-delivery-time" placeholder="Ex : 25-35 min" />
+      </div>
+    </div>
+    <div class="modal-row">
+      <div>
+        <label>Commande minimum ($)</label>
+        <input type="number" id="r-min-order" placeholder="0" min="0" step="0.5" />
+      </div>
+      <div>
+        <label>Frais de livraison ($)</label>
+        <input type="number" id="r-delivery-fee" placeholder="0" min="0" step="0.5" />
+      </div>
+    </div>
+    <div class="modal-field">
+      <label>URL de l'image principale</label>
+      <input type="url" id="r-image" placeholder="https://..." oninput="previewRestoImg()" />
+      <div class="img-preview-wrap"><img id="r-img-preview" class="img-preview" alt="Aperçu" /></div>
+    </div>
+    <div class="modal-field">
+      <label>Adresse / Zone</label>
+      <input type="text" id="r-address" placeholder="Ex : Tripoli, Mina" />
+    </div>
+    <div class="modal-field">
+      <label>Téléphone</label>
+      <input type="text" id="r-phone" placeholder="Ex : +961 71 000 000" />
+    </div>
+
+    <hr class="modal-divider">
+
+    <div class="modal-avail-row">
+      <div class="modal-avail-label">
+        Ouvert maintenant
+        <span>Les clients peuvent passer commande</span>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="r-is-open" checked />
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <hr class="modal-divider">
+
+    <div style="margin-bottom:6px;">
+      <label>Mot de passe du dashboard resto</label>
+      <div class="info-box" style="margin-bottom:10px;">
+        <i class="ti ti-info-circle"></i>
+        <div class="info-box-text">C'est le mot de passe que le restaurant utilise pour se connecter à <strong>Resto.dash</strong>. Tous les restos partagent actuellement le même mot de passe global défini dans le code.</div>
+      </div>
+      <div class="password-row">
+        <span class="password-val" id="current-pwd-display">••••</span>
+        <span class="password-hint">Mot de passe global actuel</span>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('resto-modal')">Annuler</button>
+      <button class="btn-primary" style="flex:2;margin-bottom:0;" onclick="saveResto()" id="resto-save-btn">
+        <i class="ti ti-plus"></i> Ajouter le restaurant
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Supprimer resto -->
+<div class="modal-overlay" id="delete-modal">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-title">Supprimer ce restaurant ?</div>
+    <div class="modal-sub">Cette action supprimera aussi tous ses articles de menu.</div>
+    <div class="delete-modal-body">
+      <i class="ti ti-building-store delete-modal-icon"></i>
+      <div>
+        <div class="delete-modal-name" id="delete-modal-name">—</div>
+        <div class="delete-modal-warn">Commandes et données conservées dans Supabase</div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('delete-modal')">Annuler</button>
+      <button class="act-refuse" onclick="confirmDeleteResto()"><i class="ti ti-trash"></i> Confirmer la suppression</button>
+    </div>
+  </div>
+</div>
+
+<!-- Login -->
+<div id="login-screen" class="login-screen">
+  <div class="login-box">
+    <div class="login-logo">Resto<span>.</span>admin</div>
+    <div class="login-badge">
+      <i class="ti ti-shield-lock" style="font-size:12px;color:#7a78cf;"></i>
+      <span>ACCÈS PRIVÉ</span>
+    </div>
+    <label>Code administrateur</label>
+    <input type="password" id="admin-pwd" placeholder="••••••••" onkeydown="if(event.key==='Enter') adminLogin()" />
+    <button class="btn-primary" onclick="adminLogin()">Accéder au tableau de bord</button>
+    <div class="login-hint">Accès réservé à l'administrateur de la plateforme</div>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app-screen" style="display:none;">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="brand">Resto<span>.</span>admin</div>
+      <div class="tb-divider"></div>
+      <div class="admin-pill">
+        <div class="admin-pill-dot"></div>
+        <div class="admin-pill-text">ADMIN</div>
+      </div>
+      <div class="live-pill"><div class="live-dot"></div><div class="live-text">LIVE</div></div>
+    </div>
+    <div class="topbar-right">
+      <button class="btn-logout" onclick="adminLogout()">Déconnexion</button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">Plateforme</div>
+        <div class="nav-item active" id="nav-restos" onclick="showPage('restos', this)">
+          <i class="ti ti-building-store"></i> Restaurants
+          <span class="nav-badge" id="nav-restos-count" style="display:none">0</span>
+        </div>
+        <div class="nav-item" id="nav-orders" onclick="showPage('orders', this)">
+          <i class="ti ti-layout-list"></i> Commandes
+          <span class="nav-badge-purple" id="nav-orders-count" style="display:none">0</span>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Stats rapides</div>
+        <div class="nav-item" id="nav-stats" onclick="showPage('stats', this)">
+          <i class="ti ti-chart-bar"></i> Vue d'ensemble
+        </div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- Page: Restaurants -->
+      <div class="page active" id="page-restos">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Restaurants</div>
+            <div class="page-sub" id="restos-sub">Gérer tous les restaurants de la plateforme</div>
+          </div>
+          <button class="btn-add" onclick="openAddResto()">
+            <i class="ti ti-plus"></i> Ajouter un restaurant
+          </button>
+        </div>
+
+        <div class="info-box" style="margin-bottom:24px;">
+          <i class="ti ti-info-circle"></i>
+          <div class="info-box-text">
+            Quand tu ajoutes un restaurant ici, il apparaît <strong>immédiatement</strong> dans l'app mobile et dans le dashboard des restos. Le restaurant peut ensuite se connecter avec son nom et le mot de passe global pour gérer son menu.
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <div class="search-wrap">
+            <i class="ti ti-search"></i>
+            <input class="search-input" type="text" placeholder="Rechercher un restaurant..." id="restos-search" oninput="renderRestos()" />
+          </div>
+          <select class="filter-select" id="restos-cat-filter" onchange="renderRestos()">
+            <option value="all">Toutes catégories</option>
+            <option value="Burgers">🍔 Burgers</option>
+            <option value="Shawarma">🌯 Shawarma</option>
+            <option value="Pizza">🍕 Pizza</option>
+            <option value="Healthy">🥗 Healthy</option>
+            <option value="Sushi">🍣 Sushi</option>
+            <option value="Grillades">🥩 Grillades</option>
+          </select>
+          <select class="filter-select" id="restos-status-filter" onchange="renderRestos()">
+            <option value="all">Tous statuts</option>
+            <option value="open">🟢 Ouverts</option>
+            <option value="closed">🔴 Fermés</option>
+          </select>
+        </div>
+
+        <div class="section-header">
+          <div class="section-title">Restaurants</div>
+          <div class="section-count" id="restos-count">0</div>
+        </div>
+        <div class="restos-grid" id="restos-container">
+          <div class="empty" style="grid-column:1/-1;"><i class="ti ti-loader"></i><p>Chargement...</p></div>
+        </div>
+      </div>
+
+      <!-- Page: Commandes -->
+      <div class="page" id="page-orders">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Toutes les commandes</div>
+            <div class="page-sub">Vue globale de toutes les commandes de la plateforme</div>
+          </div>
+        </div>
+
+        <div class="stats-row" style="margin-bottom:24px;">
+          <div class="stat hi-orange"><div class="stat-label"><i class="ti ti-clock"></i> En attente</div><div class="stat-value c-orange" id="all-pending">0</div></div>
+          <div class="stat"><div class="stat-label"><i class="ti ti-tools-kitchen-2"></i> En préparation</div><div class="stat-value" style="color:#4a8abf" id="all-preparing">0</div></div>
+          <div class="stat hi-green"><div class="stat-label"><i class="ti ti-check"></i> Livrées</div><div class="stat-value c-green" id="all-delivered">0</div></div>
+          <div class="stat hi-purple"><div class="stat-label"><i class="ti ti-currency-dollar"></i> CA total</div><div class="stat-value c-purple" id="all-revenue">$0</div></div>
+        </div>
+
+        <div class="toolbar">
+          <div class="search-wrap">
+            <i class="ti ti-search"></i>
+            <input class="search-input" type="text" placeholder="Rechercher client, resto..." id="orders-search" oninput="renderOrders()" />
+          </div>
+          <select class="filter-select" id="orders-status-filter" onchange="renderOrders()">
+            <option value="all">Tous statuts</option>
+            <option value="pending">⏳ En attente</option>
+            <option value="preparing">🍳 En préparation</option>
+            <option value="on_the_way">🛵 En route</option>
+            <option value="delivered">✅ Livrées</option>
+            <option value="refused">❌ Refusées</option>
+          </select>
+          <select class="filter-select" id="orders-resto-filter" onchange="renderOrders()">
+            <option value="all">Tous les restos</option>
+          </select>
+        </div>
+
+        <div class="section-header">
+          <div class="section-title">Commandes</div>
+          <div class="section-count" id="orders-count">0</div>
+        </div>
+        <div class="orders-table-wrap">
+          <table class="orders-table">
+            <thead>
+              <tr>
+                <th>Client</th>
+                <th>Restaurant</th>
+                <th>Montant</th>
+                <th>Paiement</th>
+                <th>Statut</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody id="orders-tbody">
+              <tr><td colspan="6" style="text-align:center;color:#3a3a38;padding:40px;">Chargement...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Page: Stats -->
+      <div class="page" id="page-stats">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Vue d'ensemble</div>
+            <div class="page-sub">Statistiques globales de la plateforme</div>
+          </div>
+        </div>
+        <div class="stats-row">
+          <div class="stat hi-orange"><div class="stat-label"><i class="ti ti-building-store"></i> Restaurants</div><div class="stat-value c-orange" id="stat-total-restos">0</div><div class="stat-sub">sur la plateforme</div></div>
+          <div class="stat hi-green"><div class="stat-label"><i class="ti ti-circle-check"></i> Ouverts</div><div class="stat-value c-green" id="stat-open-restos">0</div><div class="stat-sub">en ce moment</div></div>
+          <div class="stat hi-purple"><div class="stat-label"><i class="ti ti-layout-list"></i> Commandes totales</div><div class="stat-value c-purple" id="stat-total-orders">0</div><div class="stat-sub">depuis le début</div></div>
+          <div class="stat"><div class="stat-label"><i class="ti ti-currency-dollar"></i> CA plateforme</div><div class="stat-value c-orange" id="stat-total-revenue">$0</div><div class="stat-sub">commandes livrées</div></div>
+        </div>
+        <div class="stats-row" style="grid-template-columns:repeat(3,1fr);">
+          <div class="stat"><div class="stat-label"><i class="ti ti-percentage"></i> Commission (5%)</div><div class="stat-value c-muted" id="stat-commission">$0</div><div class="stat-sub">à percevoir</div></div>
+          <div class="stat"><div class="stat-label"><i class="ti ti-tools-kitchen-2"></i> Articles menu</div><div class="stat-value" id="stat-menu-items">0</div><div class="stat-sub">au total</div></div>
+          <div class="stat hi-green"><div class="stat-label"><i class="ti ti-check"></i> Livrées aujourd'hui</div><div class="stat-value c-green" id="stat-today-delivered">0</div><div class="stat-sub">aujourd'hui</div></div>
+        </div>
+
+        <div class="section-header" style="margin-top:8px;">
+          <div class="section-title">Top restaurants — CA</div>
+        </div>
+        <div class="orders-table-wrap">
+          <table class="orders-table">
+            <thead>
+              <tr><th>Restaurant</th><th>Catégorie</th><th>Commandes livrées</th><th>CA généré</th><th>Commission</th><th>Statut</th></tr>
+            </thead>
+            <tbody id="stats-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://nrorzrzigeztgvdvgtdv.supabase.co'
+  const SUPABASE_KEY = 'sb_publishable_DFixcj3yogS-1sS3fpOQww_YIccZM9f'
+  const { createClient } = supabase
+  const db = createClient(SUPABASE_URL, SUPABASE_KEY)
+
+  // ── Mot de passe admin (CHANGE-LE !) ──
+  const ADMIN_PASSWORD = '1234'
+  // ── Mot de passe global partagé par les restos dans Resto.dash ──
+  const RESTO_DASH_PASSWORD = '1234'
+
+  let allRestos = [], allOrders = [], allMenuItems = []
+  let editingRestoId = null, deletingRestoId = null
+  let realtimeChannel = null
+
+  /* ── Toast ── */
+  function showToast(msg, type = 'success') {
+    const el = document.getElementById('toast')
+    el.querySelector('i').className = type === 'success' ? 'ti ti-check' : 'ti ti-alert-circle'
+    el.className = `toast ${type}`
+    document.getElementById('toast-msg').textContent = msg
+    el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 3200)
+  }
+
+  /* ── Auth admin ── */
+  function adminLogin() {
+    const pwd = document.getElementById('admin-pwd').value
+    if (pwd !== ADMIN_PASSWORD) {
+      document.getElementById('admin-pwd').style.borderColor = '#c05a5a'
+      setTimeout(() => document.getElementById('admin-pwd').style.borderColor = '', 1500)
+      return
+    }
+    document.getElementById('login-screen').style.display = 'none'
+    document.getElementById('app-screen').style.display = 'block'
+    document.getElementById('current-pwd-display').textContent = RESTO_DASH_PASSWORD
+    startAdmin()
+  }
+
+  function adminLogout() {
+    if (realtimeChannel) db.removeChannel(realtimeChannel)
+    document.getElementById('app-screen').style.display = 'none'
+    document.getElementById('login-screen').style.display = 'flex'
+    document.getElementById('admin-pwd').value = ''
+  }
+
+  /* ── Navigation ── */
+  function showPage(page, navEl) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'))
+    document.getElementById('page-' + page).classList.add('active')
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'))
+    if (navEl) navEl.classList.add('active')
+    if (page === 'stats') renderStats()
+    if (page === 'orders') renderOrders()
+  }
+
+  /* ── Start ── */
+  async function startAdmin() {
+    await Promise.all([fetchRestos(), fetchOrders(), fetchMenuItems()])
+    subscribeRealtime()
+  }
+
+  async function fetchRestos() {
+    const { data } = await db.from('restaurants').select('*').order('name')
+    if (data) {
+      allRestos = data
+      const n = document.getElementById('nav-restos-count')
+      n.textContent = data.length; n.style.display = data.length > 0 ? '' : 'none'
+      document.getElementById('restos-sub').textContent = `${data.length} restaurant${data.length > 1 ? 's' : ''} sur la plateforme`
+      // Populate orders filter
+      const sel = document.getElementById('orders-resto-filter')
+      sel.innerHTML = '<option value="all">Tous les restos</option>'
+      data.forEach(r => sel.innerHTML += `<option value="${r.id}">${r.name}</option>`)
+      renderRestos()
+    }
+  }
+
+  async function fetchOrders() {
+    const { data } = await db.from('orders').select('*, restaurants(name)').order('created_at', { ascending: false })
+    if (data) {
+      allOrders = data
+      const active = data.filter(o => o.status !== 'delivered' && o.status !== 'refused').length
+      const n = document.getElementById('nav-orders-count')
+      n.textContent = active; n.style.display = active > 0 ? '' : 'none'
+      renderOrders()
+      updateGlobalStats()
+    }
+  }
+
+  async function fetchMenuItems() {
+    const { data } = await db.from('menu_items').select('id').count()
+    if (data) document.getElementById('stat-menu-items').textContent = data.length || 0
+  }
+
+  function subscribeRealtime() {
+    realtimeChannel = db.channel(`admin-realtime-${Date.now()}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'restaurants' }, async () => {
+        await fetchRestos(); updateGlobalStats()
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, async () => {
+        await fetchOrders(); updateGlobalStats()
+      })
+      .subscribe()
+  }
+
+  /* ── Render restos ── */
+  function renderRestos() {
+    const search = (document.getElementById('restos-search').value || '').toLowerCase()
+    const catFilter = document.getElementById('restos-cat-filter').value
+    const statusFilter = document.getElementById('restos-status-filter').value
+
+    let restos = allRestos
+    if (search) restos = restos.filter(r => (r.name + r.description + r.category).toLowerCase().includes(search))
+    if (catFilter !== 'all') restos = restos.filter(r => r.category === catFilter)
+    if (statusFilter !== 'all') restos = restos.filter(r => statusFilter === 'open' ? r.is_open !== false : r.is_open === false)
+
+    document.getElementById('restos-count').textContent = restos.length
+    const container = document.getElementById('restos-container')
+
+    if (restos.length === 0) {
+      container.innerHTML = `<div class="empty" style="grid-column:1/-1;"><i class="ti ti-building-store"></i><p>Aucun restaurant trouvé</p><small>Ajoute le premier restaurant avec le bouton ci-dessus</small></div>`
+      return
+    }
+
+    const CAT_ICONS = { Burgers:'🍔', Shawarma:'🌯', Pizza:'🍕', Healthy:'🥗', Sushi:'🍣', Grillades:'🥩' }
+
+    container.innerHTML = restos.map(r => {
+      const isOpen = r.is_open !== false
+      const imgBlock = r.image_url
+        ? `<img class="rc-img" src="${r.image_url}" alt="${r.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><div class="rc-img-placeholder" style="display:none;"><i class="ti ti-photo-off"></i></div>`
+        : `<div class="rc-img-placeholder"><i class="ti ti-building-store"></i></div>`
+      const orderCount = allOrders.filter(o => o.restaurant_id === r.id).length
+      const revenue = allOrders.filter(o => o.restaurant_id === r.id && o.status === 'delivered').reduce((s,o) => s + Number(o.total || 0), 0)
+      return `
+        <div class="resto-card ${isOpen ? '' : 'is-closed'}" id="rc-${r.id}">
+          <div class="rc-img-wrap">
+            ${imgBlock}
+            <div class="rc-status-badge ${isOpen ? 'open' : 'closed'}">
+              <div class="rc-status-dot"></div>
+              ${isOpen ? 'Ouvert' : 'Fermé'}
+            </div>
+            <div class="rc-cat-tag">${CAT_ICONS[r.category] || '🍽️'} ${r.category || '—'}</div>
+          </div>
+          <div class="rc-body">
+            <div class="rc-top">
+              <div>
+                <div class="rc-name">${r.name}</div>
+                <div class="rc-id">${r.id.substring(0,8)}...</div>
+              </div>
+            </div>
+            <div class="rc-desc">${r.description || '<span style="color:#3a3a38;font-style:italic;">Pas de description</span>'}</div>
+            <div class="rc-meta">
+              ${r.delivery_time ? `<div class="rc-meta-pill"><i class="ti ti-clock"></i> ${r.delivery_time}</div>` : ''}
+              ${r.min_order ? `<div class="rc-meta-pill"><i class="ti ti-currency-dollar"></i> Min $${r.min_order}</div>` : ''}
+              <div class="rc-meta-pill"><i class="ti ti-layout-list"></i> ${orderCount} cmd</div>
+              <div class="rc-meta-pill" style="color:#4a9a6a;border-color:#1a3a1a;background:#0a1a0a;"><i class="ti ti-currency-dollar"></i> $${revenue.toFixed(0)}</div>
+            </div>
+          </div>
+          <div class="rc-footer">
+            <button class="rc-edit-btn" onclick="openEditResto('${r.id}')"><i class="ti ti-pencil" style="font-size:13px"></i> Modifier</button>
+            <button class="rc-open-btn ${isOpen ? '' : 'closed-state'}" onclick="toggleRestoOpen('${r.id}', ${isOpen})">
+              ${isOpen ? '<i class="ti ti-eye-off" style="font-size:12px"></i> Fermer' : '<i class="ti ti-eye" style="font-size:12px"></i> Ouvrir'}
+            </button>
+            <button class="rc-del-btn" onclick="openDeleteResto('${r.id}', '${r.name.replace(/'/g, "\\'")}')"><i class="ti ti-trash"></i></button>
+          </div>
+        </div>`
+    }).join('')
+  }
+
+  /* ── Render orders ── */
+  function renderOrders() {
+    const search = (document.getElementById('orders-search').value || '').toLowerCase()
+    const statusFilter = document.getElementById('orders-status-filter').value
+    const restoFilter = document.getElementById('orders-resto-filter').value
+
+    let orders = allOrders
+    if (search) orders = orders.filter(o => (o.customer_name + (o.restaurants?.name || '')).toLowerCase().includes(search))
+    if (statusFilter !== 'all') orders = orders.filter(o => o.status === statusFilter)
+    if (restoFilter !== 'all') orders = orders.filter(o => o.restaurant_id === restoFilter)
+
+    document.getElementById('orders-count').textContent = orders.length
+
+    const statusMap = {
+      pending:    `<span class="status-badge s-pending">⏳ En attente</span>`,
+      preparing:  `<span class="status-badge s-preparing">🍳 Préparation</span>`,
+      on_the_way: `<span class="status-badge s-on_the_way">🛵 En route</span>`,
+      delivered:  `<span class="status-badge s-delivered">✅ Livré</span>`,
+      refused:    `<span class="status-badge s-refused">❌ Refusé</span>`
+    }
+    const tbody = document.getElementById('orders-tbody')
+    if (orders.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#3a3a38;padding:40px;">Aucune commande</td></tr>'; return }
+    tbody.innerHTML = orders.map(o => {
+      const date = new Date(o.created_at).toLocaleDateString('fr-FR', { day:'numeric', month:'short' })
+      const time = new Date(o.created_at).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' })
+      const pay = o.payment_method === 'whish' ? '📱 Whish' : '💵 Cash'
+      const restoName = o.restaurants?.name || allRestos.find(r => r.id === o.restaurant_id)?.name || '—'
+      return `<tr>
+        <td><strong style="color:#e8e8e4;">${o.customer_name}</strong><br><span style="font-size:11px;color:#4a4a47;">${o.customer_phone}</span></td>
+        <td><span class="resto-tag">${restoName}</span></td>
+        <td style="color:#c97848;font-weight:600;">$${o.total}</td>
+        <td style="color:#6a6a67;">${pay}</td>
+        <td>${statusMap[o.status] || o.status}</td>
+        <td style="color:#4a4a47;font-size:12px;">${date} ${time}</td>
+      </tr>`
+    }).join('')
+
+    // Update stats bar
+    document.getElementById('all-pending').textContent  = allOrders.filter(o => o.status === 'pending').length
+    document.getElementById('all-preparing').textContent= allOrders.filter(o => o.status === 'preparing').length
+    document.getElementById('all-delivered').textContent= allOrders.filter(o => o.status === 'delivered').length
+    const rev = allOrders.filter(o => o.status === 'delivered').reduce((s,o) => s + Number(o.total || 0), 0)
+    document.getElementById('all-revenue').textContent  = '$' + rev.toFixed(0)
+  }
+
+  /* ── Render stats ── */
+  function renderStats() {
+    document.getElementById('stat-total-restos').textContent = allRestos.length
+    document.getElementById('stat-open-restos').textContent  = allRestos.filter(r => r.is_open !== false).length
+    document.getElementById('stat-total-orders').textContent = allOrders.length
+    const rev = allOrders.filter(o => o.status === 'delivered').reduce((s,o) => s + Number(o.total || 0), 0)
+    document.getElementById('stat-total-revenue').textContent  = '$' + rev.toFixed(2)
+    document.getElementById('stat-commission').textContent     = '$' + (rev * 0.05).toFixed(2)
+    const today = new Date().toDateString()
+    document.getElementById('stat-today-delivered').textContent = allOrders.filter(o => o.status === 'delivered' && new Date(o.created_at).toDateString() === today).length
+
+    // Top restos table
+    const tbody = document.getElementById('stats-tbody')
+    const CAT_ICONS = { Burgers:'🍔', Shawarma:'🌯', Pizza:'🍕', Healthy:'🥗', Sushi:'🍣', Grillades:'🥩' }
+    const restoStats = allRestos.map(r => {
+      const delivered = allOrders.filter(o => o.restaurant_id === r.id && o.status === 'delivered')
+      const ca = delivered.reduce((s,o) => s + Number(o.total || 0), 0)
+      return { ...r, deliveredCount: delivered.length, ca }
+    }).sort((a,b) => b.ca - a.ca)
+
+    if (restoStats.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#3a3a38;padding:30px;">Aucun restaurant</td></tr>'; return }
+    tbody.innerHTML = restoStats.map(r => `
+      <tr>
+        <td><strong style="color:#e8e8e4;">${r.name}</strong></td>
+        <td style="color:#6a6a67;">${CAT_ICONS[r.category] || '🍽️'} ${r.category || '—'}</td>
+        <td style="color:#a8a8a4;">${r.deliveredCount}</td>
+        <td style="color:#c97848;font-weight:600;">$${r.ca.toFixed(2)}</td>
+        <td style="color:#5a5a57;">$${(r.ca * 0.05).toFixed(2)}</td>
+        <td>${r.is_open !== false ? '<span class="status-badge s-delivered">🟢 Ouvert</span>' : '<span class="status-badge s-refused">🔴 Fermé</span>'}</td>
+      </tr>`).join('')
+  }
+
+  function updateGlobalStats() {
+    document.getElementById('stat-total-restos').textContent = allRestos.length
+    document.getElementById('stat-open-restos').textContent  = allRestos.filter(r => r.is_open !== false).length
+    document.getElementById('stat-total-orders').textContent = allOrders.length
+    const rev = allOrders.filter(o => o.status === 'delivered').reduce((s,o) => s + Number(o.total || 0), 0)
+    document.getElementById('stat-total-revenue').textContent = '$' + rev.toFixed(2)
+    document.getElementById('stat-commission').textContent    = '$' + (rev * 0.05).toFixed(2)
+  }
+
+  /* ── Resto CRUD ── */
+  function openAddResto() {
+    editingRestoId = null
+    document.getElementById('resto-modal-title').textContent = 'Ajouter un restaurant'
+    document.getElementById('resto-modal-sub').textContent = 'Il apparaîtra immédiatement dans l\'app et dans le dashboard des restos.'
+    document.getElementById('resto-save-btn').innerHTML = '<i class="ti ti-plus"></i> Ajouter le restaurant'
+    ;['r-name','r-desc','r-delivery-time','r-min-order','r-delivery-fee','r-image','r-address','r-phone'].forEach(id => document.getElementById(id).value = '')
+    document.getElementById('r-category').value = ''
+    document.getElementById('r-is-open').checked = true
+    document.getElementById('r-img-preview').classList.remove('visible')
+    document.getElementById('resto-modal').classList.add('open')
+  }
+
+  function openEditResto(restoId) {
+    const r = allRestos.find(x => x.id === restoId); if (!r) return
+    editingRestoId = restoId
+    document.getElementById('resto-modal-title').textContent = 'Modifier le restaurant'
+    document.getElementById('resto-modal-sub').textContent = 'Les modifications sont visibles immédiatement.'
+    document.getElementById('resto-save-btn').innerHTML = '<i class="ti ti-check"></i> Enregistrer'
+    document.getElementById('r-name').value          = r.name || ''
+    document.getElementById('r-desc').value          = r.description || ''
+    document.getElementById('r-category').value      = r.category || ''
+    document.getElementById('r-delivery-time').value = r.delivery_time || ''
+    document.getElementById('r-min-order').value     = r.min_order || ''
+    document.getElementById('r-delivery-fee').value  = r.delivery_fee || ''
+    document.getElementById('r-image').value         = r.image_url || ''
+    document.getElementById('r-address').value       = r.address || ''
+    document.getElementById('r-phone').value         = r.phone || ''
+    document.getElementById('r-is-open').checked     = r.is_open !== false
+    const preview = document.getElementById('r-img-preview')
+    if (r.image_url) { preview.src = r.image_url; preview.classList.add('visible') } else preview.classList.remove('visible')
+    document.getElementById('resto-modal').classList.add('open')
+  }
+
+  function previewRestoImg() {
+    const url = document.getElementById('r-image').value.trim()
+    const p = document.getElementById('r-img-preview')
+    if (url) { p.src = url; p.classList.add('visible') } else p.classList.remove('visible')
+  }
+
+  async function saveResto() {
+    const name = document.getElementById('r-name').value.trim()
+    const category = document.getElementById('r-category').value
+    if (!name) { alert('Le nom est obligatoire'); return }
+    if (!category) { alert('La catégorie est obligatoire'); return }
+
+    const payload = {
+      name,
+      description:   document.getElementById('r-desc').value.trim() || null,
+      category,
+      delivery_time: document.getElementById('r-delivery-time').value.trim() || null,
+      min_order:     parseFloat(document.getElementById('r-min-order').value) || null,
+      delivery_fee:  parseFloat(document.getElementById('r-delivery-fee').value) || null,
+      image_url:     document.getElementById('r-image').value.trim() || null,
+      address:       document.getElementById('r-address').value.trim() || null,
+      phone:         document.getElementById('r-phone').value.trim() || null,
+      is_open:       document.getElementById('r-is-open').checked
+    }
+
+    if (editingRestoId) {
+      const { error } = await db.from('restaurants').update(payload).eq('id', editingRestoId)
+      if (error) { showToast('Erreur : ' + error.message, 'error'); return }
+      showToast('Restaurant modifié ✓')
+    } else {
+      const { error } = await db.from('restaurants').insert(payload)
+      if (error) { showToast('Erreur : ' + error.message, 'error'); return }
+      showToast('Restaurant ajouté ✓ — Il est maintenant visible dans l\'app !')
+    }
+    closeModal('resto-modal')
+    await fetchRestos()
+  }
+
+  function openDeleteResto(restoId, restoName) {
+    deletingRestoId = restoId
+    document.getElementById('delete-modal-name').textContent = restoName
+    document.getElementById('delete-modal').classList.add('open')
+  }
+
+  async function confirmDeleteResto() {
+    // Supprime d'abord les menu_items du resto
+    await db.from('menu_items').delete().eq('restaurant_id', deletingRestoId)
+    const { error } = await db.from('restaurants').delete().eq('id', deletingRestoId)
+    if (error) { showToast('Erreur : ' + error.message, 'error'); return }
+    closeModal('delete-modal')
+    showToast('Restaurant supprimé')
+    await fetchRestos()
+  }
+
+  async function toggleRestoOpen(restoId, currentState) {
+    const newState = !currentState
+    const { error } = await db.from('restaurants').update({ is_open: newState }).eq('id', restoId)
+    if (error) { showToast('Erreur', 'error'); return }
+    showToast(newState ? '🟢 Restaurant ouvert' : '🔴 Restaurant fermé')
+    await fetchRestos()
+  }
+
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('open')
+    editingRestoId = null; deletingRestoId = null
+  }
+
+  // Fermer modal en cliquant l'overlay
+  document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', function(e) {
+      if (e.target === this) this.classList.remove('open')
+    })
+  })
+</script>
+</body>
+</html>
