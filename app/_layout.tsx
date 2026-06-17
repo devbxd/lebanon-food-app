@@ -16,18 +16,15 @@ function RootLayoutNav() {
   const { isLoading: langLoading } = useTranslation()
 
   useEffect(() => {
-    // Check session client au démarrage
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
       setReady(true)
     })
 
-    // Écoute les changements (login / logout)
     const { data } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s)
     })
 
-    // Vérifie si une langue a déjà été choisie
     AsyncStorage.getItem(LANGUAGE_STORAGE_KEY).then((saved) => {
       setHasLanguage(!!saved)
     })
@@ -42,15 +39,17 @@ function RootLayoutNav() {
     const inAuth = current === 'login' || current === 'register'
     const inDriver = current === 'driver'
     const inLanguage = current === 'language'
+    const inSplash = current === 'splash'
 
-    // Première ouverture de l'app : pas de langue choisie → forcer l'écran de langue
+    // Le splash gère lui-même sa redirection, on ne touche pas
+    if (inSplash) return
+
     if (!hasLanguage && !inLanguage) {
       router.replace('/language')
       return
     }
 
     if (hasLanguage && inLanguage) {
-      // Langue déjà choisie mais on est sur l'écran de langue (ex: retour arrière) -> rediriger normalement
       if (!session) router.replace('/login')
       else router.replace('/(tabs)')
       return
@@ -70,4 +69,3 @@ export default function RootLayout() {
     </LanguageProvider>
   )
 }
-
