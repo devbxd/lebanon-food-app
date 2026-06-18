@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native'
 import { useRouter } from 'expo-router'
-import { supabase } from '../../lib/supabase'
+import { useEffect, useRef, useState } from 'react'
+import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { useTranslation } from '../../lib/LanguageContext'
+import { registerForPushNotifications, sendLocalNotif, STATUS_MESSAGES } from '../../lib/notifications'
+import { supabase } from '../../lib/supabase'
 
 export default function OrdersScreen() {
   const { t } = useTranslation()
@@ -11,6 +12,9 @@ export default function OrdersScreen() {
   const [refreshing, setRefreshing] = useState(false)
   const [userPhone, setUserPhone] = useState(null)
   const router = useRouter()
+
+  // Garder en mémoire les anciens statuts pour détecter les changements
+  const prevStatusMapRef = useRef({})
 
   const STATUS_CONFIG = {
     pending:    { label: t('orders.pending'),    emoji: '⏳', color: '#FF9800', step: 0 },
@@ -28,6 +32,9 @@ export default function OrdersScreen() {
   ]
 
   useEffect(() => {
+    // Demander permission push au chargement
+    registerForPushNotifications(null)
+
     let sub = null
     async function init() {
       const { data: { user } } = await supabase.auth.getUser()
@@ -35,9 +42,47 @@ export default function OrdersScreen() {
       const phone = user.user_metadata?.phone
       setUserPhone(phone)
       await fetchOrders(phone)
+
       sub = supabase
         .channel('orders-changes-' + phone)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => fetchOrders(phone))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
+          // Détecter changement de statut → notif
+          if (payload.eventType === 'UPDATE' && payload.new) {
+            const order = payload.new
+            const prevStatus = prevStatusMapRef.current[order.id]
+            const newStatus = order.status
+
+            if (newStatus !== prevStatus && STATUS_MESSAGES[newStatus]) {
+              const msg = STATUS_MESSAGES[newStatus]
+              sendLocalNotif({
+                title: msg.title,
+                body: msg.body,
+                data: { orderId: order.id, type: 'status' },
+                channel: 'order-status',
+              })
+            }
+            prevStatusMapRef.current[order.id] = newStatus
+          }
+          fetchOrders(phone)
+        })
+        .subscribe()
+
+      // Écouter les nouveaux messages chat sur toutes les commandes actives
+      // (pour notifier même si l'utilisateur est sur la liste des commandes)
+      sub = supabase
+        .channel('chat-all-' + phone)
+        .on('postgres_changes', {
+          event: 'INSERT', schema: 'public', table: 'order_messages'
+        }, (payload) => {
+          if (payload.new.sender === 'restaurant') {
+            sendLocalNotif({
+              title: '💬 Message du restaurant',
+              body: payload.new.message,
+              data: { orderId: payload.new.order_id, type: 'chat' },
+              channel: 'chat',
+            })
+          }
+        })
         .subscribe()
     }
     init()
@@ -49,8 +94,17 @@ export default function OrdersScreen() {
       .from('orders')
       .select('*, restaurants(name)')
       .eq('customer_phone', phone)
+      .neq('status', 'preorder') // masquer les précommandes pas encore actives
       .order('created_at', { ascending: false })
-    if (data) setOrders(data)
+    if (data) {
+      // Mettre à jour la map des statuts
+      data.forEach(o => {
+        if (!prevStatusMapRef.current[o.id]) {
+          prevStatusMapRef.current[o.id] = o.status
+        }
+      })
+      setOrders(data)
+    }
     setLoading(false)
     setRefreshing(false)
   }
@@ -60,7 +114,7 @@ export default function OrdersScreen() {
     if (userPhone) fetchOrders(userPhone)
   }
 
-  const activeOrders = orders.filter(o => o.status !== 'delivered' && o.status !== 'refused')
+  const activeOrders = orders.filter(o => o.status !== 'delivered' && o.status !== 'refused' && o.status !== 'preorder')
   const pastOrders = orders.filter(o => o.status === 'delivered' || o.status === 'refused')
 
   function renderOrder(order, isActive) {
@@ -76,7 +130,6 @@ export default function OrdersScreen() {
         onPress={() => router.push({ pathname: '/tracking', params: { orderId: order.id } })}
         activeOpacity={0.85}
       >
-        {/* Header */}
         <View style={styles.orderHeader}>
           <View style={{ flex: 1 }}>
             <Text style={styles.orderResto}>{order.restaurants?.name || 'Restaurant'}</Text>
@@ -92,7 +145,6 @@ export default function OrdersScreen() {
           </View>
         </View>
 
-        {/* Progress steps (sauf refusée) */}
         {order.status !== 'refused' && (
           <View style={styles.stepsRow}>
             {STEPS.map((step, i) => {
@@ -117,7 +169,6 @@ export default function OrdersScreen() {
           </View>
         )}
 
-        {/* Articles */}
         <View style={styles.itemsRow}>
           {items.slice(0, 3).map((item, i) => (
             <View key={i} style={styles.itemPill}>
@@ -131,21 +182,18 @@ export default function OrdersScreen() {
           )}
         </View>
 
-        {/* Message restaurant */}
         {order.restaurant_message ? (
           <View style={styles.messageBox}>
             <Text style={styles.messageTitle}>💬 {order.restaurant_message}</Text>
           </View>
         ) : null}
 
-        {/* Refus */}
         {order.status === 'refused' && order.refusal_reason && (
           <View style={styles.refusalBox}>
             <Text style={styles.refusalText}>❌ {order.refusal_reason}</Text>
           </View>
         )}
 
-        {/* Whish badge */}
         {order.payment_method === 'whish' && (
           <View style={[styles.whishBadge, order.payment_status === 'confirmed' ? styles.whishConfirmed : styles.whishWaiting]}>
             <Text style={styles.whishBadgeText}>
@@ -154,7 +202,6 @@ export default function OrdersScreen() {
           </View>
         )}
 
-        {/* Footer */}
         <View style={styles.orderFooter}>
           <Text style={styles.orderTotal}>${order.total}</Text>
           {canTrack ? (
@@ -166,7 +213,6 @@ export default function OrdersScreen() {
           )}
         </View>
 
-        {/* Livreur assigné */}
         {order.driver_name && order.status !== 'delivered' && (
           <View style={styles.driverRow}>
             <View style={styles.driverAvatar}>
@@ -227,23 +273,19 @@ const styles = StyleSheet.create({
   subtitle: { color: '#555', fontSize: 13, marginBottom: 28 },
   loading: { color: '#555', textAlign: 'center', marginTop: 40 },
   sectionLabel: { color: '#555', fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12, marginTop: 8 },
-
   emptyBox: { alignItems: 'center', marginTop: 80 },
   emptyEmoji: { fontSize: 52, marginBottom: 16 },
   emptyText: { color: '#555', fontSize: 17, fontWeight: '600' },
   emptySubText: { color: '#333', fontSize: 13, marginTop: 6 },
-
   orderCard: { backgroundColor: '#141414', borderRadius: 20, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: '#1f1f1f' },
   orderCardActive: { borderColor: '#FF6B3544' },
   orderCardRefused: { opacity: 0.6 },
-
   orderHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 14 },
   orderResto: { color: '#fff', fontWeight: '700', fontSize: 16 },
   orderDate: { color: '#555', fontSize: 12, marginTop: 3 },
   statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1 },
   statusEmoji: { fontSize: 12 },
   statusLabel: { fontSize: 12, fontWeight: '700' },
-
   stepsRow: { flexDirection: 'row', marginBottom: 14, position: 'relative' },
   stepWrapper: { flex: 1, alignItems: 'center', position: 'relative' },
   stepCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#1f1f1f', borderWidth: 1, borderColor: '#2a2a2a', justifyContent: 'center', alignItems: 'center', marginBottom: 4 },
@@ -251,28 +293,22 @@ const styles = StyleSheet.create({
   stepEmoji: { fontSize: 14 },
   stepLabel: { color: '#444', fontSize: 10, textAlign: 'center' },
   stepLine: { position: 'absolute', top: 18, left: '50%', right: '-50%', height: 2, backgroundColor: '#1f1f1f', zIndex: -1 },
-
   itemsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 },
   itemPill: { backgroundColor: '#1f1f1f', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   itemPillTxt: { color: '#777', fontSize: 12 },
-
   messageBox: { backgroundColor: '#2196F310', borderRadius: 10, padding: 10, marginBottom: 10, borderWidth: 1, borderColor: '#2196F325' },
   messageTitle: { color: '#90CAF9', fontSize: 13 },
-
   refusalBox: { backgroundColor: '#f4433610', borderRadius: 10, padding: 10, marginBottom: 10, borderWidth: 1, borderColor: '#f4433630' },
   refusalText: { color: '#ff8888', fontSize: 13 },
-
   whishBadge: { borderRadius: 8, padding: 8, marginBottom: 10, borderWidth: 1 },
   whishWaiting: { backgroundColor: '#FF980012', borderColor: '#FF980030' },
   whishConfirmed: { backgroundColor: '#4CAF5012', borderColor: '#4CAF5030' },
   whishBadgeText: { fontSize: 12, fontWeight: '600', color: '#fff' },
-
   orderFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, borderTopWidth: 1, borderTopColor: '#1f1f1f' },
   orderTotal: { color: '#FF6B35', fontWeight: '700', fontSize: 17 },
   trackBtn: { backgroundColor: '#9C27B022', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: '#9C27B044' },
   trackBtnTxt: { color: '#CE93D8', fontSize: 13, fontWeight: '600' },
   tapHint: { color: '#333', fontSize: 12 },
-
   driverRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#1f1f1f' },
   driverAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#9C27B022', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#9C27B044' },
   driverAvatarTxt: { color: '#CE93D8', fontWeight: '700', fontSize: 14 },

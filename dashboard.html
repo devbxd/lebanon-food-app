@@ -10,6 +10,36 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0a; color: #e8e8e4; min-height: 100vh; font-size: 14px; }
 
+
+
+
+
+
+
+
+
+/* Horaires modal */
+.hours-modal-grid { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+.hours-day-row { display: grid; grid-template-columns: 90px auto 1fr 1fr; align-items: center; gap: 10px; background: #0e0e0d; border: 0.5px solid #1e1e1c; border-radius: 8px; padding: 10px 14px; }
+.hours-day-name { font-size: 13px; color: #8a8a86; font-weight: 500; }
+.hours-day-row.disabled-day { opacity: 0.45; }
+.hours-time-input { background: #111110; border: 0.5px solid #2a2a28; border-radius: 6px; padding: 7px 10px; color: #e8e8e4; font-size: 13px; font-family: inherit; outline: none; width: 100%; transition: border-color .15s; margin: 0; }
+.hours-time-input:focus { border-color: #c97848; }
+
+/* Auto banner */
+.auto-banner { display: none; align-items: center; gap: 10px; background: #0e0e1e; border: 0.5px solid #2a2a5a; border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; color: #7a78cf; font-size: 13px; font-weight: 500; }
+.auto-banner.visible { display: flex; }
+.auto-banner i { font-size: 18px; flex-shrink: 0; }
+
+
+
+
+
+
+
+
+
+
     /* ── RTL support ── */
     [dir="rtl"] { font-family: 'Segoe UI', Tahoma, -apple-system, sans-serif; }
     [dir="rtl"] .topbar-left { flex-direction: row-reverse; }
@@ -51,15 +81,39 @@
     .lang-btn.active { background: #1e1a14; color: #c97848; }
     .lang-sep { width: 0.5px; height: 14px; background: #2a2a28; }
 
-    /* ── Open/Close Toggle ── */
-    .open-status-btn { display: flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; border: none; font-family: inherit; transition: all .2s; }
-    .open-status-btn.is-open { background: #1a3a1a; border: 0.5px solid #2a6a2a; color: #4a9a4a; }
-    .open-status-btn.is-open:hover { background: #1e4a1e; }
-    .open-status-btn.is-closed { background: #2a1a1a; border: 0.5px solid #4a2a2a; color: #c05a5a; }
-    .open-status-btn.is-closed:hover { background: #3a1a1a; }
-    .open-status-dot { width: 7px; height: 7px; border-radius: 50%; transition: background .2s; }
-    .is-open .open-status-dot { background: #4a9a4a; box-shadow: 0 0 6px #4a9a4a88; animation: blink 2s infinite; }
-    .is-closed .open-status-dot { background: #c05a5a; }
+
+
+
+
+
+
+
+
+
+
+   /* ── Status Mode (3 états) ── */
+.status-mode-btn { display: flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; border: none; font-family: inherit; transition: all .2s; }
+.status-mode-btn.mode-open { background: #1a3a1a; border: 0.5px solid #2a6a2a; color: #4a9a4a; }
+.status-mode-btn.mode-open:hover { background: #1e4a1e; }
+.status-mode-btn.mode-closed { background: #2a1a1a; border: 0.5px solid #4a2a2a; color: #c05a5a; }
+.status-mode-btn.mode-closed:hover { background: #3a1a1a; }
+.status-mode-btn.mode-auto { background: #1a1a2e; border: 0.5px solid #3a3a6a; color: #7a78cf; }
+.status-mode-btn.mode-auto:hover { background: #22223a; }
+.status-mode-dot { width: 7px; height: 7px; border-radius: 50%; transition: background .2s; }
+.mode-open .status-mode-dot { background: #4a9a4a; box-shadow: 0 0 6px #4a9a4a88; animation: blink 2s infinite; }
+.mode-closed .status-mode-dot { background: #c05a5a; }
+.mode-auto .status-mode-dot { background: #7a78cf; animation: blink 1.5s infinite; }
+
+
+
+
+
+
+
+
+
+
+
 
     /* ── Closed banner ── */
     .closed-banner { display: none; align-items: center; gap: 10px; background: #1a0a0a; border: 0.5px solid #3a1818; border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; color: #c05a5a; font-size: 13px; font-weight: 500; }
@@ -91,27 +145,62 @@
     .nav-badge-purple { margin-left: auto; background: #2e2a4a; color: #a898df; font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 10px; }
     .nav-badge-green { margin-left: auto; background: #1a3a1a; color: #4a9a6a; font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 10px; }
 
-    /* Sidebar status card */
-    .sidebar-status-card { margin: 0 16px 20px; border-radius: 10px; padding: 12px 14px; border: 0.5px solid; transition: all .25s; }
-    .sidebar-status-card.is-open { background: #0e1e0e; border-color: #2a4a2a; }
-    .sidebar-status-card.is-closed { background: #1a0e0e; border-color: #3a1a1a; }
-    .sidebar-status-label { font-size: 10px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
-    .sidebar-status-card.is-open .sidebar-status-label { color: #4a6a4a; }
-    .sidebar-status-card.is-closed .sidebar-status-label { color: #6a3a3a; }
-    .sidebar-status-row { display: flex; align-items: center; justify-content: space-between; }
-    .sidebar-status-text { font-size: 13px; font-weight: 600; }
-    .sidebar-status-card.is-open .sidebar-status-text { color: #4a9a6a; }
-    .sidebar-status-card.is-closed .sidebar-status-text { color: #c05a5a; }
-    .sidebar-toggle { position: relative; display: inline-block; width: 44px; height: 24px; }
-    .sidebar-toggle input { opacity: 0; width: 0; height: 0; }
-    .sidebar-toggle-slider { position: absolute; cursor: pointer; inset: 0; border-radius: 24px; transition: background .2s; }
-    .sidebar-status-card.is-open .sidebar-toggle-slider { background: #2a5a2a; }
-    .sidebar-status-card.is-closed .sidebar-toggle-slider { background: #3a1a1a; }
-    .sidebar-toggle-slider:before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; bottom: 3px; border-radius: 50%; background: #6a6a67; transition: transform .2s, background .2s; }
-    .sidebar-toggle input:checked + .sidebar-toggle-slider:before { transform: translateX(20px); background: #4a9a4a; }
-    .sidebar-status-sub { font-size: 11px; margin-top: 6px; }
-    .sidebar-status-card.is-open .sidebar-status-sub { color: #2a5a2a; }
-    .sidebar-status-card.is-closed .sidebar-status-sub { color: #5a2a2a; }
+
+
+
+
+
+
+
+
+/* Sidebar status card */
+.sidebar-status-card { margin: 0 16px 20px; border-radius: 10px; padding: 12px 14px; border: 0.5px solid; transition: all .25s; }
+.sidebar-status-card.is-open { background: #0e1e0e; border-color: #2a4a2a; }
+.sidebar-status-card.is-closed { background: #1a0e0e; border-color: #3a1a1a; }
+.sidebar-status-card.is-auto { background: #0e0e1e; border-color: #2a2a4a; }
+.sidebar-status-label { font-size: 10px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
+.sidebar-status-card.is-open .sidebar-status-label { color: #4a6a4a; }
+.sidebar-status-card.is-closed .sidebar-status-label { color: #6a3a3a; }
+.sidebar-status-card.is-auto .sidebar-status-label { color: #4a4a8a; }
+.sidebar-status-row { display: flex; align-items: center; justify-content: space-between; }
+.sidebar-status-text { font-size: 13px; font-weight: 600; }
+.sidebar-status-card.is-open .sidebar-status-text { color: #4a9a6a; }
+.sidebar-status-card.is-closed .sidebar-status-text { color: #c05a5a; }
+.sidebar-status-card.is-auto .sidebar-status-text { color: #7a78cf; }
+.sidebar-status-sub { font-size: 11px; margin-top: 6px; }
+.sidebar-status-card.is-open .sidebar-status-sub { color: #2a5a2a; }
+.sidebar-status-card.is-closed .sidebar-status-sub { color: #5a2a2a; }
+.sidebar-status-card.is-auto .sidebar-status-sub { color: #3a3a6a; }
+
+/* Mode selector */
+.mode-selector { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
+.mode-option { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 12px; color: #5a5a57; transition: all .15s; border: 0.5px solid transparent; }
+.mode-option:hover { background: #1a1a18; color: #a8a8a4; }
+.mode-option.selected.m-open { background: #0e1e0e; border-color: #2a4a2a; color: #4a9a6a; }
+.mode-option.selected.m-closed { background: #1a0e0e; border-color: #3a1818; color: #c05a5a; }
+.mode-option.selected.m-auto { background: #0e0e1e; border-color: #2a2a4a; color: #7a78cf; }
+.mode-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.m-open .mode-dot { background: #4a9a6a; }
+.m-closed .mode-dot { background: #c05a5a; }
+.m-auto .mode-dot { background: #7a78cf; }
+.mode-hours-link { display: flex; align-items: center; gap: 5px; margin-top: 6px; padding: 5px 8px; font-size: 11px; color: #3a3a7a; cursor: pointer; border-radius: 5px; transition: color .15s; }
+.mode-hours-link:hover { color: #7a78cf; background: #0e0e1a; }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     .content { padding: 28px 32px; overflow-y: auto; }
     .page { display: none; }
@@ -536,6 +625,46 @@
   </div>
 </div>
 
+
+
+
+
+<!-- Modal Horaires -->
+<div class="modal-overlay" id="hours-modal">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-title">🕐 Horaires d'ouverture automatiques</div>
+    <div class="modal-sub">Le restaurant s'ouvrira et se fermera automatiquement selon ces horaires.</div>
+    <div class="hours-modal-grid" id="hours-grid"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('hours-modal')">Annuler</button>
+      <button class="btn-primary" style="flex:2;margin-bottom:0;" onclick="saveHours()">
+        <i class="ti ti-check"></i> Enregistrer les horaires
+      </button>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 <!-- Modal Refus -->
 <div class="modal-overlay" id="refuse-modal">
   <div class="modal">
@@ -671,11 +800,19 @@
         <div class="lang-sep"></div>
         <button class="lang-btn" onclick="setLang('ar')" id="lang-ar">ع</button>
       </div>
-      <!-- Open/Close -->
-      <button class="open-status-btn is-open" id="open-status-btn" onclick="toggleRestoOpen()">
-        <div class="open-status-dot"></div>
-        <span id="open-status-label" data-i18n="open">Ouvert</span>
-      </button>
+
+
+
+  <!-- Status Mode -->
+<button class="status-mode-btn mode-open" id="status-mode-btn" onclick="cycleStatusMode()">
+  <div class="status-mode-dot"></div>
+  <span id="status-mode-label">Ouvert</span>
+</button>
+
+
+
+
+
       <button class="icon-btn" id="sound-btn" onclick="toggleSound()">
         <i class="ti ti-bell" id="sound-icon"></i>
         <span id="sound-label" data-i18n="sound_on">Son activé</span>
@@ -685,18 +822,35 @@
   </div>
 
   <div class="layout">
-    <div class="sidebar">
-      <div class="sidebar-status-card is-open" id="sidebar-status-card">
-        <div class="sidebar-status-label" data-i18n="resto_status">Statut du restaurant</div>
-        <div class="sidebar-status-row">
-          <div class="sidebar-status-text" id="sidebar-status-text">🟢 <span data-i18n="open">Ouvert</span></div>
-          <label class="sidebar-toggle">
-            <input type="checkbox" id="sidebar-open-toggle" checked onchange="toggleRestoOpen()" />
-            <span class="sidebar-toggle-slider"></span>
-          </label>
-        </div>
-        <div class="sidebar-status-sub" id="sidebar-status-sub" data-i18n="clients_can_order">Les clients peuvent commander</div>
-      </div>
+    <div class="sidebar"> 
+    <div class="sidebar-status-card is-open" id="sidebar-status-card">
+  <div class="sidebar-status-label">Statut du restaurant</div>
+  <div class="sidebar-status-row">
+    <div class="sidebar-status-text" id="sidebar-status-text">🟢 Ouvert</div>
+  </div>
+  <div class="sidebar-status-sub" id="sidebar-status-sub">Les clients peuvent commander</div>
+
+  <!-- Sélecteur de mode -->
+  <div class="mode-selector">
+    <div class="mode-option m-open selected" id="mode-opt-open" onclick="setStatusMode('open')">
+      <div class="mode-dot"></div> Manuel — Ouvert
+    </div>
+    <div class="mode-option m-closed" id="mode-opt-closed" onclick="setStatusMode('closed')">
+      <div class="mode-dot"></div> Manuel — Fermé
+    </div>
+    <div class="mode-option m-auto" id="mode-opt-auto" onclick="setStatusMode('auto')">
+      <div class="mode-dot"></div> Automatique (horaires)
+    </div>
+  </div>
+
+  <!-- Lien horaires -->
+  <div class="mode-hours-link" onclick="openHoursModal()">
+    <i class="ti ti-clock" style="font-size:13px"></i> Modifier les horaires →
+  </div>
+</div>
+
+
+
 
       <div class="sidebar-section">
         <div class="sidebar-label" data-i18n="orders">Commandes</div>
@@ -726,13 +880,19 @@
     <div class="content">
       <!-- Page: Orders -->
       <div class="page active" id="page-orders">
-        <div class="closed-banner" id="closed-banner">
-          <i class="ti ti-moon-off"></i>
-          <div>
-            <strong data-i18n="closed_title">Restaurant fermé</strong> — <span data-i18n="closed_desc">Les clients voient votre page en grisé et ne peuvent pas commander.</span>
-            <span style="color:#8a3a3a; margin-left:6px; cursor:pointer; text-decoration:underline;" onclick="toggleRestoOpen()" data-i18n="reopen">Rouvrir →</span>
-          </div>
-        </div>
+      <div class="closed-banner" id="closed-banner">
+  <i class="ti ti-moon-off"></i>
+  <div>
+    <strong>Restaurant fermé</strong> — Les clients voient votre page en grisé et ne peuvent pas commander.
+    <span style="color:#8a3a3a; margin-left:6px; cursor:pointer; text-decoration:underline;" onclick="setStatusMode('open')">Rouvrir →</span>
+  </div>
+</div>
+
+<!-- Bannière mode auto -->
+<div class="auto-banner" id="auto-banner">
+  <i class="ti ti-clock"></i>
+  <div id="auto-banner-text">Mode automatique activé · Vérification des horaires...</div>
+</div>
 
         <div class="page-header">
           <div>
@@ -796,6 +956,12 @@
   let pendingOrderId = null, editingItemId = null, deletingItemId = null
   let activePage = 'orders', currentOptions = []
   let isRestoOpen = true
+let currentStatusMode = 'open'
+let openingHours = {}
+let autoCheckInterval = null
+
+const DAYS_EN = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday']
+const DAYS_FR = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi']
 
   /* ══════════════════════
      I18N — TRADUCTIONS
@@ -1058,6 +1224,179 @@
     showToast(soundEnabled ? t('notif_sound_on') : t('notif_sound_off'))
   }
 
+
+
+
+
+
+
+/* ══ HOURS MODAL ══ */
+function openHoursModal() {
+  buildHoursGrid()
+  document.getElementById('hours-modal').classList.add('open')
+}
+
+function buildHoursGrid() {
+  const grid = document.getElementById('hours-grid')
+  grid.innerHTML = DAYS_EN.map((day, i) => {
+    const h = openingHours[day] || { open: '09:00', close: '23:00', enabled: true }
+    return `
+      <div class="hours-day-row ${h.enabled ? '' : 'disabled-day'}" id="hrow-${day}">
+        <span class="hours-day-name">${DAYS_FR[i]}</span>
+        <label class="toggle-switch" style="width:36px;height:20px;">
+          <input type="checkbox" id="hday-${day}" ${h.enabled ? 'checked' : ''} onchange="toggleDayEnabled('${day}')">
+          <span class="toggle-slider"></span>
+        </label>
+        <input type="time" class="hours-time-input" id="hopen-${day}" value="${h.open || '09:00'}" ${h.enabled ? '' : 'disabled'}>
+        <input type="time" class="hours-time-input" id="hclose-${day}" value="${h.close || '23:00'}" ${h.enabled ? '' : 'disabled'}>
+      </div>`
+  }).join('')
+}
+
+function toggleDayEnabled(day) {
+  const enabled = document.getElementById('hday-' + day).checked
+  document.getElementById('hrow-' + day).classList.toggle('disabled-day', !enabled)
+  document.getElementById('hopen-' + day).disabled = !enabled
+  document.getElementById('hclose-' + day).disabled = !enabled
+}
+
+async function saveHours() {
+  const hours = {}
+  DAYS_EN.forEach(day => {
+    hours[day] = {
+      enabled: document.getElementById('hday-' + day).checked,
+      open: document.getElementById('hopen-' + day).value,
+      close: document.getElementById('hclose-' + day).value,
+    }
+  })
+  openingHours = hours
+  const { error } = await db.from('restaurants').update({ opening_hours: hours }).eq('id', currentRestoId)
+  if (error) { showToast('Erreur sauvegarde horaires', 'error'); return }
+  closeModal('hours-modal')
+  showToast('✅ Horaires enregistrés')
+  if (currentStatusMode === 'auto') runAutoCheck()
+}
+
+/* ══ STATUS MODE ══ */
+function isCurrentlyOpen() {
+  if (!openingHours || Object.keys(openingHours).length === 0) return false
+  const now = new Date()
+  const dayName = DAYS_EN[now.getDay()]
+  const dayHours = openingHours[dayName]
+  if (!dayHours || !dayHours.enabled) return false
+  const curMins = now.getHours() * 60 + now.getMinutes()
+  const [oh, om] = (dayHours.open || '00:00').split(':').map(Number)
+  const [ch, cm] = (dayHours.close || '23:59').split(':').map(Number)
+  return curMins >= oh * 60 + om && curMins < ch * 60 + cm
+}
+
+function getNextOpenInfo() {
+  if (!openingHours || Object.keys(openingHours).length === 0) return null
+  const now = new Date()
+  for (let d = 0; d < 7; d++) {
+    const check = new Date(now); check.setDate(now.getDate() + d)
+    const dayName = DAYS_EN[check.getDay()]
+    const h = openingHours[dayName]
+    if (!h || !h.enabled) continue
+    const [oh, om] = (h.open || '09:00').split(':').map(Number)
+    const openMins = oh * 60 + om
+    const nowMins = now.getHours() * 60 + now.getMinutes()
+    if (d === 0 && nowMins >= openMins) continue
+    return d === 0 ? `aujourd'hui à ${h.open}` : `${DAYS_FR[check.getDay()]} à ${h.open}`
+  }
+  return null
+}
+
+async function runAutoCheck() {
+  if (currentStatusMode !== 'auto') return
+  const shouldBeOpen = isCurrentlyOpen()
+  if (shouldBeOpen !== isRestoOpen) {
+    isRestoOpen = shouldBeOpen
+    await db.from('restaurants').update({ is_open: shouldBeOpen }).eq('id', currentRestoId)
+  }
+  updateStatusUI()
+  const banner = document.getElementById('auto-banner')
+  const bannerText = document.getElementById('auto-banner-text')
+  banner.classList.add('visible')
+  if (shouldBeOpen) {
+    const dayHours = openingHours[DAYS_EN[new Date().getDay()]]
+    bannerText.innerHTML = `⚡ Mode automatique · <strong style="color:#9a98ff">Ouvert jusqu'à ${dayHours?.close || '—'}</strong>`
+  } else {
+    const next = getNextOpenInfo()
+    bannerText.innerHTML = `🕐 Mode automatique · Fermé · ${next ? `Prochaine ouverture : <strong style="color:#9a98ff">${next}</strong>` : 'Aucune ouverture planifiée'}`
+  }
+}
+
+function setStatusMode(mode) {
+  currentStatusMode = mode
+  if (autoCheckInterval) { clearInterval(autoCheckInterval); autoCheckInterval = null }
+  document.getElementById('mode-opt-open').classList.toggle('selected', mode === 'open')
+  document.getElementById('mode-opt-closed').classList.toggle('selected', mode === 'closed')
+  document.getElementById('mode-opt-auto').classList.toggle('selected', mode === 'auto')
+  document.getElementById('auto-banner').classList.remove('visible')
+  if (mode === 'open') {
+    isRestoOpen = true
+    db.from('restaurants').update({ is_open: true, status_mode: 'manual' }).eq('id', currentRestoId)
+    showToast('✅ Restaurant ouvert — les clients peuvent commander')
+  } else if (mode === 'closed') {
+    isRestoOpen = false
+    db.from('restaurants').update({ is_open: false, status_mode: 'manual' }).eq('id', currentRestoId)
+    showToast('🔴 Restaurant fermé')
+  } else {
+    db.from('restaurants').update({ status_mode: 'auto' }).eq('id', currentRestoId)
+    runAutoCheck()
+    autoCheckInterval = setInterval(runAutoCheck, 60000)
+    showToast('🕐 Mode automatique activé')
+  }
+  updateStatusUI()
+}
+
+function cycleStatusMode() {
+  const modes = ['open', 'closed', 'auto']
+  setStatusMode(modes[(modes.indexOf(currentStatusMode) + 1) % 3])
+}
+
+function updateStatusUI() {
+  const mode = currentStatusMode
+  const open = mode === 'auto' ? isRestoOpen : (mode === 'open')
+  const btn = document.getElementById('status-mode-btn')
+  const label = document.getElementById('status-mode-label')
+  if (mode === 'open')   { btn.className = 'status-mode-btn mode-open';   label.textContent = 'Ouvert' }
+  if (mode === 'closed') { btn.className = 'status-mode-btn mode-closed'; label.textContent = 'Fermé' }
+  if (mode === 'auto')   { btn.className = 'status-mode-btn mode-auto';   label.textContent = open ? '⚡ Auto · Ouvert' : '🕐 Auto · Fermé' }
+  const card = document.getElementById('sidebar-status-card')
+  card.className = 'sidebar-status-card ' + (mode === 'auto' ? 'is-auto' : (open ? 'is-open' : 'is-closed'))
+  const statusText = document.getElementById('sidebar-status-text')
+  const statusSub = document.getElementById('sidebar-status-sub')
+  if (mode === 'auto') {
+    statusText.textContent = open ? '⚡ Auto — Ouvert' : '🕐 Auto — Fermé'
+    statusSub.textContent = open ? 'Horaires automatiques actifs' : "En attente de l'heure d'ouverture"
+  } else {
+    statusText.textContent = open ? '🟢 Ouvert' : '🔴 Fermé'
+    statusSub.textContent = open ? 'Les clients peuvent commander' : 'Page visible, commandes bloquées'
+  }
+  document.getElementById('closed-banner').classList.toggle('visible', !open && mode !== 'auto')
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   /* ── Open/Close ── */
   function updateOpenUI(open) {
     isRestoOpen = open
@@ -1163,16 +1502,42 @@
     startDashboard()
   }
 
-  function logout() {
-    if (channel) db.removeChannel(channel); dismissOrderNotif(); currentRestoId = null
+ function logout() {
+  if (channel) db.removeChannel(channel)
+  if (autoCheckInterval) clearInterval(autoCheckInterval)
+  dismissOrderNotif(); currentRestoId = null
     document.getElementById('app-screen').style.display = 'none'
     document.getElementById('login-screen').style.display = 'flex'
   }
 
-  async function startDashboard() {
-    const { data: restoData } = await db.from('restaurants').select('is_open').eq('id', currentRestoId).single()
-    updateOpenUI(restoData?.is_open !== false)
-    await fetchOrders(); await fetchMenu()
+async function startDashboard() {
+  const { data: restoData } = await db.from('restaurants')
+    .select('is_open, opening_hours, status_mode')
+    .eq('id', currentRestoId).single()
+
+  openingHours = restoData?.opening_hours || {}
+  isRestoOpen = restoData?.is_open !== false
+  currentStatusMode = restoData?.status_mode || 'manual'
+
+  // Convertir 'manual' en 'open' ou 'closed'
+  if (currentStatusMode === 'manual') {
+    currentStatusMode = isRestoOpen ? 'open' : 'closed'
+  }
+
+  // Mettre à jour les boutons du sélecteur
+  document.getElementById('mode-opt-open').classList.toggle('selected', currentStatusMode === 'open')
+  document.getElementById('mode-opt-closed').classList.toggle('selected', currentStatusMode === 'closed')
+  document.getElementById('mode-opt-auto').classList.toggle('selected', currentStatusMode === 'auto')
+
+  updateStatusUI()
+
+  // Si mode auto, lancer la vérification automatique
+  if (currentStatusMode === 'auto') {
+    runAutoCheck()
+    autoCheckInterval = setInterval(runAutoCheck, 60000)
+  }
+
+  await fetchOrders(); await fetchMenu()
     channel = db.channel('orders-' + currentRestoId)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${currentRestoId}` },
         async (payload) => {
@@ -1194,7 +1559,7 @@
     const onway     = allOrders.filter(o => o.status === 'on_the_way').length
     const delivered = allOrders.filter(o => o.status === 'delivered' && new Date(o.created_at).toDateString() === today).length
     const whishWait = allOrders.filter(o => o.payment_method === 'whish' && o.payment_status === 'waiting').length
-    const activeCount = allOrders.filter(o => o.status !== 'delivered' && o.status !== 'refused').length
+    const activeCount = allOrders.filter(o => o.status !== 'delivered' && o.status !== 'refused' && o.status !== 'preorder').length
     document.getElementById('count-pending').textContent   = pending
     document.getElementById('count-preparing').textContent = preparing
     document.getElementById('count-onway').textContent     = onway
@@ -1380,7 +1745,7 @@
 
   function renderOrders() {
     let orders = allOrders
-    if (currentFilter==='active')    orders = allOrders.filter(o=>o.status!=='delivered'&&o.status!=='refused')
+   if (currentFilter==='active') orders = allOrders.filter(o=>o.status!=='delivered'&&o.status!=='refused'&&o.status!=='preorder')
     if (currentFilter==='whish')     orders = allOrders.filter(o=>o.payment_method==='whish')
     if (currentFilter==='delivered') orders = allOrders.filter(o=>o.status==='delivered')
     if (currentFilter==='refused')   orders = allOrders.filter(o=>o.status==='refused')

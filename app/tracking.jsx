@@ -1,13 +1,24 @@
-import { useEffect, useState, useRef } from 'react'
+import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useEffect, useRef, useState } from 'react'
 import {
-  View, Text, StyleSheet, TouchableOpacity,
-  Animated, Dimensions, ScrollView, TextInput,
-  KeyboardAvoidingView, Platform, Keyboard
+  Animated, Dimensions,
+  Keyboard,
+  KeyboardAvoidingView, Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native'
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps'
-import { useLocalSearchParams, useRouter } from 'expo-router'
-import { supabase } from '../lib/supabase'
 import { useTranslation } from '../lib/LanguageContext'
+import {
+  registerForPushNotifications,
+  sendLocalNotif,
+  STATUS_MESSAGES
+} from '../lib/notifications'
+import { supabase } from '../lib/supabase'
 
 const { height: SCREEN_H } = Dimensions.get('window')
 
@@ -42,6 +53,8 @@ export default function TrackingScreen() {
 
   const mapRef = useRef(null)
   const pulseAnim = useRef(new Animated.Value(1)).current
+  const prevStatusRef = useRef(null)
+  const pushTokenRef = useRef(null)
 
   const STATUS_CONFIG = {
     pending:    { label: t('tracking.pending'),    emoji: '⏳', color: '#FF9800', step: 0 },
@@ -68,6 +81,15 @@ export default function TrackingScreen() {
     ).start()
   }, [])
 
+  // Init push notifications au chargement
+  useEffect(() => {
+    async function initPush() {
+      const token = await registerForPushNotifications(orderId)
+      pushTokenRef.current = token
+    }
+    initPush()
+  }, [orderId])
+
   useEffect(() => {
     fetchOrder()
     fetchMessages()
@@ -79,9 +101,28 @@ export default function TrackingScreen() {
         event: 'UPDATE', schema: 'public', table: 'orders',
         filter: `id=eq.${orderId}`
       }, (payload) => {
-        setOrder(payload.new)
-        if (payload.new.driver_lat && payload.new.driver_lng) {
-          const loc = { latitude: payload.new.driver_lat, longitude: payload.new.driver_lng }
+        const newOrder = payload.new
+        const newStatus = newOrder.status
+        const prevStatus = prevStatusRef.current
+
+        setOrder(newOrder)
+
+        // Notif + son si statut a changé
+        if (newStatus !== prevStatus && STATUS_MESSAGES[newStatus]) {
+          const msg = STATUS_MESSAGES[newStatus]
+          sendLocalNotif({
+            title: msg.title,
+            body: msg.body,
+            data: { orderId, type: 'status' },
+            channel: 'order-status',
+          })
+        }
+
+        prevStatusRef.current = newStatus
+
+        // Mise à jour position livreur
+        if (newOrder.driver_lat && newOrder.driver_lng) {
+          const loc = { latitude: newOrder.driver_lat, longitude: newOrder.driver_lng }
           setDriverLocation(loc)
           mapRef.current?.animateToRegion({ ...loc, latitudeDelta: 0.01, longitudeDelta: 0.01 }, 1000)
         }
@@ -95,15 +136,26 @@ export default function TrackingScreen() {
         event: 'INSERT', schema: 'public', table: 'order_messages',
         filter: `order_id=eq.${orderId}`
       }, (payload) => {
-        setMessages(prev => [...prev, payload.new])
-        // Si message du resto et chat fermé → incrémenter badge
-        if (payload.new.sender === 'restaurant') {
+        const newMsg = payload.new
+        setMessages(prev => [...prev, newMsg])
+
+        // Notif + son si message du resto
+        if (newMsg.sender === 'restaurant') {
           setChatOpen(prev => {
-            if (!prev) setUnreadCount(c => c + 1)
+            if (!prev) {
+              // Chat fermé → badge + notif
+              setUnreadCount(c => c + 1)
+              sendLocalNotif({
+                title: '💬 Message du restaurant',
+                body: newMsg.message,
+                data: { orderId, type: 'chat' },
+                channel: 'chat',
+              })
+            }
             return prev
           })
         }
-        // Scroll bas
+
         setTimeout(() => chatScrollRef.current?.scrollToEnd({ animated: true }), 100)
       })
       .subscribe()
@@ -122,6 +174,7 @@ export default function TrackingScreen() {
       .single()
     if (data) {
       setOrder(data)
+      prevStatusRef.current = data.status
       if (data.driver_lat && data.driver_lng) {
         setDriverLocation({ latitude: data.driver_lat, longitude: data.driver_lng })
       }
@@ -255,22 +308,11 @@ export default function TrackingScreen() {
       )}
 
       {/* BOTTOM SHEET */}
-      <View
-        style={[
-          styles.sheet,
-          {
-            height: chatOpen
-              ? SCREEN_H * 0.75
-              : SCREEN_H * 0.42,
-          },
-        ]}
-      >
+      <View style={[styles.sheet, { height: chatOpen ? SCREEN_H * 0.75 : SCREEN_H * 0.42 }]}>
         <View style={styles.sheetHandle} />
 
         {showChat && chatOpen ? (
-          /* Chat ouvert */
           <View style={styles.chatContainer}>
-            {/* Chat header */}
             <View style={styles.chatHeader}>
               <View style={styles.chatHeaderLeft}>
                 <View style={styles.chatHeaderAvatar}>
@@ -288,7 +330,6 @@ export default function TrackingScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Messages */}
             <ScrollView
               ref={chatScrollRef}
               style={styles.chatMessages}
@@ -324,7 +365,6 @@ export default function TrackingScreen() {
               )}
             </ScrollView>
 
-            {/* Input */}
             <View style={styles.chatInputRow}>
               <TextInput
                 style={styles.chatInput}
@@ -346,9 +386,7 @@ export default function TrackingScreen() {
             </View>
           </View>
         ) : (
-          /* Bottom sheet normal */
           <ScrollView showsVerticalScrollIndicator={false} scrollEnabled={false}>
-            {/* Status banner */}
             <View style={[styles.statusBanner, { backgroundColor: status.color + '18', borderColor: status.color + '44' }]}>
               <Text style={styles.statusBannerEmoji}>{status.emoji}</Text>
               <View style={{ flex: 1 }}>
@@ -363,7 +401,6 @@ export default function TrackingScreen() {
               </View>
             </View>
 
-            {/* Progress steps */}
             {order.status !== 'refused' && (
               <View style={styles.stepsRow}>
                 {STEPS.map((step, i) => {
@@ -384,7 +421,6 @@ export default function TrackingScreen() {
               </View>
             )}
 
-            {/* Livreur */}
             {order.driver_name && !isDelivered && (
               <View style={styles.driverCard}>
                 <View style={styles.driverAvatar}>
@@ -403,7 +439,6 @@ export default function TrackingScreen() {
               </View>
             )}
 
-            {/* Infos */}
             <View style={styles.infoRow}>
               <View style={styles.infoBox}>
                 <Text style={styles.infoLabel}>{t('tracking.restaurant')}</Text>
@@ -419,20 +454,22 @@ export default function TrackingScreen() {
               </View>
             </View>
 
-            {/* Adresse */}
             <View style={styles.addrRow}>
               <Text style={styles.addrEmoji}>📍</Text>
               <Text style={styles.addrTxt} numberOfLines={2}>{order.customer_address}</Text>
             </View>
 
-            {/* Bouton ouvrir chat */}
             {showChat && (
               <TouchableOpacity style={styles.openChatBtn} onPress={openChat} activeOpacity={0.82}>
                 <Text style={styles.openChatBtnText}>
                   💬 Contacter le restaurant
                   {unreadCount > 0 ? `  •  ${unreadCount} nouveau${unreadCount > 1 ? 'x' : ''}` : ''}
                 </Text>
-                {unreadCount > 0 && <View style={styles.openChatBadge}><Text style={styles.openChatBadgeTxt}>{unreadCount}</Text></View>}
+                {unreadCount > 0 && (
+                  <View style={styles.openChatBadge}>
+                    <Text style={styles.openChatBadgeTxt}>{unreadCount}</Text>
+                  </View>
+                )}
               </TouchableOpacity>
             )}
           </ScrollView>
@@ -447,18 +484,14 @@ const styles = StyleSheet.create({
   loadingScreen: { flex: 1, backgroundColor: '#0d0d0d', justifyContent: 'center', alignItems: 'center' },
   loadingTxt: { color: '#555', fontSize: 16 },
   map: { flex: 1 },
-
   backBtn: { position: 'absolute', top: 60, left: 20, width: 42, height: 42, borderRadius: 21, backgroundColor: '#141414', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#2a2a2a' },
   backBtnTxt: { color: '#fff', fontSize: 18, fontWeight: '700' },
   recenterBtn: { position: 'absolute', top: 110, left: 20, width: 42, height: 42, borderRadius: 21, backgroundColor: '#141414', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#2a2a2a' },
   recenterBtnTxt: { color: '#fff', fontSize: 20 },
-
-  // Chat FAB (bouton flottant)
   chatFab: { position: 'absolute', top: 110, right: 20, width: 48, height: 48, borderRadius: 24, backgroundColor: '#1a2e1a', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#2a4a2a' },
   chatFabEmoji: { fontSize: 22 },
   chatFabBadge: { position: 'absolute', top: -4, right: -4, backgroundColor: '#FF6B35', borderRadius: 10, minWidth: 18, height: 18, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 3 },
   chatFabBadgeTxt: { color: '#fff', fontSize: 10, fontWeight: '700' },
-
   markerClient: { backgroundColor: '#FF6B35', borderRadius: 20, padding: 8, borderWidth: 2, borderColor: '#fff' },
   markerResto: { backgroundColor: '#2196F3', borderRadius: 20, padding: 8, borderWidth: 2, borderColor: '#fff' },
   markerEmoji: { fontSize: 18 },
@@ -466,34 +499,18 @@ const styles = StyleSheet.create({
   markerDriverPulse: { position: 'absolute', width: 50, height: 50, borderRadius: 25, backgroundColor: '#9C27B033' },
   markerDriver: { backgroundColor: '#9C27B0', borderRadius: 24, padding: 10, borderWidth: 3, borderColor: '#fff' },
   markerDriverEmoji: { fontSize: 20 },
-
-  // Bottom sheet
-  sheet: {
-    backgroundColor: '#141414',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingHorizontal: 20,
-    paddingTop: 0,
-    paddingBottom: 0,
-    borderTopWidth: 1,
-    borderTopColor: '#2a2a2a',
-    height: SCREEN_H * 0.78,
-  },
-
+  sheet: { backgroundColor: '#141414', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 0, paddingBottom: 0, borderTopWidth: 1, borderTopColor: '#2a2a2a' },
   sheetHandle: { width: 36, height: 4, backgroundColor: '#2a2a2a', borderRadius: 2, alignSelf: 'center', marginBottom: 14 },
-
   statusBanner: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 14, borderWidth: 1, marginBottom: 14 },
   statusBannerEmoji: { fontSize: 28 },
   statusBannerLabel: { fontWeight: '700', fontSize: 15, marginBottom: 2 },
   statusBannerSub: { color: '#888', fontSize: 13, lineHeight: 18 },
-
   stepsRow: { flexDirection: 'row', marginBottom: 14, position: 'relative' },
   stepWrapper: { flex: 1, alignItems: 'center', position: 'relative' },
   stepLine: { position: 'absolute', top: 18, left: '50%', right: '-50%', height: 2, backgroundColor: '#1f1f1f', zIndex: -1 },
   stepCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#1f1f1f', borderWidth: 1, borderColor: '#2a2a2a', justifyContent: 'center', alignItems: 'center', marginBottom: 4 },
   stepEmoji: { fontSize: 14 },
   stepLabel: { color: '#444', fontSize: 10, textAlign: 'center' },
-
   driverCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#1a1a1a', borderRadius: 14, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: '#2a2a2a' },
   driverAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#9C27B022', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#9C27B044' },
   driverAvatarTxt: { color: '#CE93D8', fontWeight: '700', fontSize: 18 },
@@ -502,69 +519,33 @@ const styles = StyleSheet.create({
   liveChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1 },
   liveDot: { width: 6, height: 6, borderRadius: 3 },
   liveChipTxt: { fontSize: 12, fontWeight: '600' },
-
   infoRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
   infoBox: { flex: 1, backgroundColor: '#1a1a1a', borderRadius: 10, padding: 10, borderWidth: 1, borderColor: '#2a2a2a' },
   infoLabel: { color: '#555', fontSize: 10, marginBottom: 3 },
   infoValue: { color: '#fff', fontWeight: '600', fontSize: 13 },
-
   addrRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', marginBottom: 12 },
   addrEmoji: { fontSize: 14, marginTop: 1 },
   addrTxt: { flex: 1, color: '#666', fontSize: 13, lineHeight: 18 },
-
-  // Bouton ouvrir chat
-  openChatBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#0e1a0e',
-    borderRadius: 12,
-    padding: 13,
-    borderWidth: 1,
-    borderColor: '#2a4a2a',
-    marginBottom: 20,
-  },
+  openChatBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#0e1a0e', borderRadius: 12, padding: 13, borderWidth: 1, borderColor: '#2a4a2a', marginBottom: 20 },
   openChatBtnText: { color: '#4a9a6a', fontWeight: '600', fontSize: 14 },
   openChatBadge: { backgroundColor: '#FF6B35', borderRadius: 10, minWidth: 20, height: 20, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 4 },
   openChatBadgeTxt: { color: '#fff', fontSize: 11, fontWeight: '700' },
-
-  // Chat container (remplace le bottom sheet quand ouvert)
   chatContainer: { flex: 1 },
-
-  chatHeader: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingBottom: 14, marginBottom: 8,
-    borderBottomWidth: 1, borderBottomColor: '#222',
-  },
+  chatHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 14, marginBottom: 8, borderBottomWidth: 1, borderBottomColor: '#222' },
   chatHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  chatHeaderAvatar: {
-    width: 38, height: 38, borderRadius: 19,
-    backgroundColor: '#2196F322', borderWidth: 1, borderColor: '#2196F344',
-    justifyContent: 'center', alignItems: 'center',
-  },
+  chatHeaderAvatar: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#2196F322', borderWidth: 1, borderColor: '#2196F344', justifyContent: 'center', alignItems: 'center' },
   chatHeaderAvatarTxt: { color: '#7AB8F0', fontWeight: '700', fontSize: 16 },
   chatHeaderTitle: { color: '#f0f0ec', fontWeight: '700', fontSize: 15 },
   chatHeaderSubtitle: { color: '#5a5a5a', fontSize: 11, marginTop: 1 },
-  chatCloseBtn: {
-    backgroundColor: '#1a1a1a', borderRadius: 16, width: 32, height: 32,
-    justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#2a2a2a',
-  },
+  chatCloseBtn: { backgroundColor: '#1a1a1a', borderRadius: 16, width: 32, height: 32, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#2a2a2a' },
   chatCloseTxt: { color: '#888', fontSize: 14 },
-
   chatMessages: { flex: 1, marginBottom: 10 },
   chatMessagesContent: { paddingVertical: 6, gap: 10 },
-
   chatEmptyBox: { alignItems: 'center', paddingVertical: 40 },
-  chatEmptyIconCircle: {
-    width: 56, height: 56, borderRadius: 28, backgroundColor: '#1a1a1a',
-    justifyContent: 'center', alignItems: 'center', marginBottom: 12,
-    borderWidth: 1, borderColor: '#2a2a2a',
-  },
+  chatEmptyIconCircle: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#1a1a1a', justifyContent: 'center', alignItems: 'center', marginBottom: 12, borderWidth: 1, borderColor: '#2a2a2a' },
   chatEmptyEmoji: { fontSize: 24 },
   chatEmptyText: { color: '#999', fontSize: 15, fontWeight: '600' },
   chatEmptySubText: { color: '#444', fontSize: 12, marginTop: 4, textAlign: 'center', paddingHorizontal: 40, lineHeight: 17 },
-
   msgRow: { flexDirection: 'column', gap: 4, maxWidth: '100%' },
   msgRowClient: { alignItems: 'flex-end' },
   msgRowResto: { alignItems: 'flex-start' },
@@ -577,20 +558,10 @@ const styles = StyleSheet.create({
   msgTime: { fontSize: 10, color: '#444', marginHorizontal: 4 },
   msgTimeClient: { textAlign: 'right' },
   msgTimeResto: { textAlign: 'left' },
-
-  chatInputRow: {
-    flexDirection: 'row', gap: 8, alignItems: 'center',
-    paddingTop: 12, borderTopWidth: 1, borderTopColor: '#222',
-  },
-  chatInput: {
-    flex: 1, backgroundColor: '#1a1a1a', borderRadius: 22,
-    paddingHorizontal: 16, paddingVertical: 11, color: '#e8e8e4', fontSize: 14,
-    borderWidth: 1, borderColor: '#2a2a2a',
-  },
-  chatSendBtn: {
-    backgroundColor: '#FF6B35', borderRadius: 21, width: 42, height: 42,
-    justifyContent: 'center', alignItems: 'center',
-  },
+  chatInputRow: { flexDirection: 'row', gap: 8, alignItems: 'center', paddingTop: 12, borderTopWidth: 1, borderTopColor: '#222' },
+  chatInput: { flex: 1, backgroundColor: '#1a1a1a', borderRadius: 22, paddingHorizontal: 16, paddingVertical: 11, color: '#e8e8e4', fontSize: 14, borderWidth: 1, borderColor: '#2a2a2a' },
+  chatSendBtn: { backgroundColor: '#FF6B35', borderRadius: 21, width: 42, height: 42, justifyContent: 'center', alignItems: 'center' },
   chatSendBtnDisabled: { backgroundColor: '#1a1a1a', opacity: 0.6 },
   chatSendEmoji: { color: '#fff', fontSize: 16 },
 })
+

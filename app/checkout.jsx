@@ -1,14 +1,16 @@
-import { useState } from 'react'
-import {
-  View, Text, TextInput, TouchableOpacity,
-  ScrollView, StyleSheet, Alert, Linking
-} from 'react-native'
-import { useLocalSearchParams, useRouter } from 'expo-router'
 import * as Location from 'expo-location'
-import { supabase } from '../lib/supabase'
+import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useEffect, useState } from 'react'
+import {
+  Alert, Linking,
+  ScrollView, StyleSheet,
+  Text, TextInput, TouchableOpacity,
+  View
+} from 'react-native'
 import { useTranslation } from '../lib/LanguageContext'
+import { supabase } from '../lib/supabase'
 
-const WHISH_LINK = 'https://whish.money/pay/TON_LIEN_ICI' // ← remplace par le lien du resto
+const WHISH_LINK = 'https://whish.money/pay/TON_LIEN_ICI'
 
 export default function CheckoutScreen() {
   const { t } = useTranslation()
@@ -24,6 +26,21 @@ export default function CheckoutScreen() {
   const [loadingGPS, setLoadingGPS] = useState(false)
   const [loading, setLoading] = useState(false)
   const [payMethod, setPayMethod] = useState('cash')
+  const [isPreorder, setIsPreorder] = useState(false)
+  const [restoOpen, setRestoOpen] = useState(true)
+
+  useEffect(() => {
+    supabase
+      .from('restaurants')
+      .select('is_open')
+      .eq('id', restaurantId)
+      .single()
+      .then(({ data }) => {
+        const open = data?.is_open === true || data?.is_open === 'true'
+        setRestoOpen(open)
+        setIsPreorder(!open)
+      })
+  }, [])
 
   async function getGPS() {
     setLoadingGPS(true)
@@ -64,7 +81,11 @@ export default function CheckoutScreen() {
 
   async function submitOrder() {
     setLoading(true)
-    const { error } = await supabase.from('orders').insert({
+
+    // Si précommande : status = 'preorder', le resto ne voit pas la commande tant qu'il est fermé
+    const orderStatus = isPreorder ? 'preorder' : 'pending'
+
+    const { data, error } = await supabase.from('orders').insert({
       restaurant_id: restaurantId,
       customer_name: name,
       customer_phone: phone,
@@ -73,11 +94,13 @@ export default function CheckoutScreen() {
       customer_lng: coords?.longitude || null,
       items: cartItems,
       total: parseFloat(total),
-      status: 'pending',
+      status: orderStatus,
       payment_method: payMethod,
       payment_status: payMethod === 'whish' ? 'waiting' : 'cash',
       note: note || null,
-    })
+      is_preorder: isPreorder,
+    }).select().single()
+
     setLoading(false)
     if (error) {
       Alert.alert(t('checkout.errorTitle'), t('checkout.orderFailed'))
@@ -88,7 +111,10 @@ export default function CheckoutScreen() {
         Alert.alert(t('checkout.errorTitle'), t('checkout.whishOpenError'))
       )
     }
-    router.push({ pathname: '/confirmation', params: { phone, payMethod } })
+    router.push({
+      pathname: '/confirmation',
+      params: { phone, payMethod, orderId: data?.id, isPreorder: isPreorder ? '1' : '0' }
+    })
   }
 
   return (
@@ -98,38 +124,45 @@ export default function CheckoutScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.back}>
           <Text style={styles.backText}>{t('checkout.back')}</Text>
         </TouchableOpacity>
+
         <Text style={styles.title}>{t('checkout.title')}</Text>
         <Text style={styles.restoName}>🍽️ {restaurantName}</Text>
+
+        {/* Bannière précommande */}
+        {isPreorder && (
+          <View style={styles.preorderBanner}>
+            <Text style={styles.preorderEmoji}>⏰</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.preorderTitle}>Précommande</Text>
+              <Text style={styles.preorderSub}>
+                Le restaurant est fermé. Ta commande sera envoyée au restaurant dès qu'il ouvrira.
+              </Text>
+            </View>
+          </View>
+        )}
 
         {/* Récap */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('checkout.summary')}</Text>
           <View style={styles.itemsBox}>
-
-
-
-        
-{cartItems.map((item, i) => (
-  <View key={i} style={[styles.item, i < cartItems.length - 1 && styles.itemBorder]}>
-    <View style={styles.itemLeft}>
-      <View style={styles.qtyBadge}>
-        <Text style={styles.qtyText}>{item.qty}</Text>
-      </View>
-      <View>
-        <Text style={styles.itemName}>{item.name}</Text>
-        {item.selectedOptions && item.selectedOptions.length > 0 && (
-          <Text style={styles.itemOptions}>
-            + {item.selectedOptions.map(o => o.name).join(', ')}
-          </Text>
-        )}
-      </View>
-    </View>
-    <Text style={styles.itemPrice}>${(item.price * item.qty).toFixed(2)}</Text>
-  </View>
-))}
-
-
-
+            {cartItems.map((item, i) => (
+              <View key={i} style={[styles.item, i < cartItems.length - 1 && styles.itemBorder]}>
+                <View style={styles.itemLeft}>
+                  <View style={styles.qtyBadge}>
+                    <Text style={styles.qtyText}>{item.qty}</Text>
+                  </View>
+                  <View>
+                    <Text style={styles.itemName}>{item.name}</Text>
+                    {item.selectedOptions && item.selectedOptions.length > 0 && (
+                      <Text style={styles.itemOptions}>
+                        + {item.selectedOptions.map(o => o.name).join(', ')}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+                <Text style={styles.itemPrice}>${(item.price * item.qty).toFixed(2)}</Text>
+              </View>
+            ))}
           </View>
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>{t('checkout.delivery')}</Text>
@@ -244,18 +277,25 @@ export default function CheckoutScreen() {
           />
         </View>
 
-        {/* Bouton */}
+        {/* Bouton commande */}
         <TouchableOpacity
-          style={[styles.orderBtn, payMethod === 'whish' && styles.orderBtnWhish, loading && styles.orderBtnLoading]}
+          style={[
+            styles.orderBtn,
+            payMethod === 'whish' && !isPreorder && styles.orderBtnWhish,
+            isPreorder && styles.orderBtnPreorder,
+            loading && styles.orderBtnLoading
+          ]}
           onPress={placeOrder}
           disabled={loading}
         >
           <Text style={styles.orderBtnText}>
             {loading
-              ? t('checkout.sending')
-              : payMethod === 'whish'
-                ? `📱 ${t('checkout.orderBtnWhish')} — $${total}`
-                : `🛵 ${t('checkout.orderBtn')} — $${total}`}
+              ? '⏳ Envoi en cours...'
+              : isPreorder
+                ? `⏰ Précommander — $${total}`
+                : payMethod === 'whish'
+                  ? `📱 ${t('checkout.orderBtnWhish')} — $${total}`
+                  : `🛵 ${t('checkout.orderBtn')} — $${total}`}
           </Text>
         </TouchableOpacity>
 
@@ -272,10 +312,17 @@ const styles = StyleSheet.create({
   backText: { color: '#FF6B35', fontWeight: '600', fontSize: 15 },
   title: { color: '#fff', fontSize: 26, fontWeight: 'bold', marginBottom: 4 },
   restoName: { color: '#888', fontSize: 14, marginBottom: 24 },
-
+  preorderBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: '#1a1a2e', borderRadius: 14,
+    padding: 16, marginBottom: 24,
+    borderWidth: 1, borderColor: '#3a3a6a'
+  },
+  preorderEmoji: { fontSize: 28 },
+  preorderTitle: { color: '#9a98ff', fontWeight: '700', fontSize: 15, marginBottom: 3 },
+  preorderSub: { color: '#5a5a8a', fontSize: 13, lineHeight: 18 },
   section: { marginBottom: 28 },
   sectionTitle: { color: '#fff', fontSize: 17, fontWeight: 'bold', marginBottom: 14 },
-
   itemsBox: { backgroundColor: '#1e1e1e', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#2a2a2a', marginBottom: 10 },
   item: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14 },
   itemBorder: { borderBottomWidth: 1, borderBottomColor: '#2a2a2a' },
@@ -284,23 +331,21 @@ const styles = StyleSheet.create({
   qtyText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
   itemName: { color: '#fff', fontSize: 14 },
   itemPrice: { color: '#FF6B35', fontWeight: '600' },
+  itemOptions: { color: '#9C27B0', fontSize: 11, marginTop: 2 },
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, paddingVertical: 6 },
   totalLabel: { color: '#888', fontSize: 14 },
   freeText: { color: '#4CAF50', fontWeight: 'bold', fontSize: 14 },
   grandRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#2a2a2a', marginTop: 4 },
   grandLabel: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
   grandAmount: { color: '#FF6B35', fontSize: 20, fontWeight: 'bold' },
-
   inputLabel: { color: '#888', fontSize: 12, marginBottom: 6 },
   input: { backgroundColor: '#1e1e1e', borderRadius: 12, padding: 14, color: '#fff', fontSize: 15, borderWidth: 1, borderColor: '#2a2a2a', marginBottom: 12 },
   inputMulti: { height: 85, textAlignVertical: 'top' },
-
   gpsBtn: { backgroundColor: '#0d2e1a', borderRadius: 12, padding: 15, borderWidth: 1, borderColor: '#1a5c2e', alignItems: 'center', marginBottom: 8 },
   gpsBtnLoading: { opacity: 0.6 },
   gpsBtnText: { color: '#4CAF50', fontWeight: '700', fontSize: 14 },
   coordsBadge: { backgroundColor: '#0d2e1a', borderRadius: 8, padding: 8, marginBottom: 8, borderWidth: 1, borderColor: '#1a5c2e' },
   coordsText: { color: '#4CAF50', fontSize: 11, textAlign: 'center' },
-
   payRow: { flexDirection: 'row', gap: 12 },
   payCard: { flex: 1, backgroundColor: '#1e1e1e', borderRadius: 16, padding: 16, alignItems: 'center', borderWidth: 2, borderColor: '#2a2a2a' },
   payCardCashActive: { borderColor: '#FF6B35', backgroundColor: '#2a1a10' },
@@ -312,18 +357,15 @@ const styles = StyleSheet.create({
   paySub: { color: '#555', fontSize: 11 },
   checkDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF6B35', marginTop: 8 },
   checkDotWhish: { backgroundColor: '#6C3EE8' },
-
   whishInfo: { marginTop: 14, backgroundColor: '#1a1030', borderRadius: 14, padding: 16, borderWidth: 1, borderColor: '#6C3EE833' },
   whishInfoTitle: { color: '#9C7EE8', fontWeight: 'bold', fontSize: 14, marginBottom: 10 },
   whishStep: { color: '#aaa', fontSize: 13, marginBottom: 7, lineHeight: 20 },
   whishAmountBox: { backgroundColor: '#6C3EE822', borderRadius: 10, padding: 12, alignItems: 'center', marginVertical: 8, borderWidth: 1, borderColor: '#6C3EE8' },
   whishAmountText: { color: '#a07af0', fontWeight: 'bold', fontSize: 22 },
-
   orderBtn: { backgroundColor: '#FF6B35', borderRadius: 16, padding: 18, alignItems: 'center', shadowColor: '#FF6B35', shadowOpacity: 0.4, shadowRadius: 12, elevation: 8 },
   orderBtnWhish: { backgroundColor: '#6C3EE8', shadowColor: '#6C3EE8' },
+  orderBtnPreorder: { backgroundColor: '#4a48a0', shadowColor: '#4a48a0' },
   orderBtnLoading: { opacity: 0.7 },
   orderBtnText: { color: '#fff', fontSize: 17, fontWeight: 'bold' },
-  itemOptions: { color: '#9C27B0', fontSize: 11, marginTop: 2 },
 })
-
 
