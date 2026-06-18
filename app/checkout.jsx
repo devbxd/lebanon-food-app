@@ -2,15 +2,19 @@ import * as Location from 'expo-location'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useEffect, useState } from 'react'
 import {
-  Alert, Linking,
-  ScrollView, StyleSheet,
-  Text, TextInput, TouchableOpacity,
-  View
+  Alert, Linking, ScrollView, StatusBar,
+  StyleSheet, Text, TextInput,
+  TouchableOpacity, View
 } from 'react-native'
 import { useTranslation } from '../lib/LanguageContext'
 import { supabase } from '../lib/supabase'
 
 const WHISH_LINK = 'https://whish.money/pay/TON_LIEN_ICI'
+const ORANGE = '#FF6B35'
+const BG = '#0a0a0a'
+const CARD = '#111'
+const BORDER = '#1c1c1c'
+const WHITE = '#fff'
 
 export default function CheckoutScreen() {
   const { t } = useTranslation()
@@ -27,17 +31,11 @@ export default function CheckoutScreen() {
   const [loading, setLoading] = useState(false)
   const [payMethod, setPayMethod] = useState('cash')
   const [isPreorder, setIsPreorder] = useState(false)
-  const [restoOpen, setRestoOpen] = useState(true)
 
   useEffect(() => {
-    supabase
-      .from('restaurants')
-      .select('is_open')
-      .eq('id', restaurantId)
-      .single()
+    supabase.from('restaurants').select('is_open').eq('id', restaurantId).single()
       .then(({ data }) => {
         const open = data?.is_open === true || data?.is_open === 'true'
-        setRestoOpen(open)
         setIsPreorder(!open)
       })
   }, [])
@@ -81,10 +79,6 @@ export default function CheckoutScreen() {
 
   async function submitOrder() {
     setLoading(true)
-
-    // Si précommande : status = 'preorder', le resto ne voit pas la commande tant qu'il est fermé
-    const orderStatus = isPreorder ? 'preorder' : 'pending'
-
     const { data, error } = await supabase.from('orders').insert({
       restaurant_id: restaurantId,
       customer_name: name,
@@ -94,7 +88,7 @@ export default function CheckoutScreen() {
       customer_lng: coords?.longitude || null,
       items: cartItems,
       total: parseFloat(total),
-      status: orderStatus,
+      status: isPreorder ? 'preorder' : 'pending',
       payment_method: payMethod,
       payment_status: payMethod === 'whish' ? 'waiting' : 'cash',
       note: note || null,
@@ -102,200 +96,215 @@ export default function CheckoutScreen() {
     }).select().single()
 
     setLoading(false)
-    if (error) {
-      Alert.alert(t('checkout.errorTitle'), t('checkout.orderFailed'))
-      return
-    }
+    if (error) { Alert.alert(t('checkout.errorTitle'), t('checkout.orderFailed')); return }
     if (payMethod === 'whish') {
-      Linking.openURL(WHISH_LINK).catch(() =>
-        Alert.alert(t('checkout.errorTitle'), t('checkout.whishOpenError'))
-      )
+      Linking.openURL(WHISH_LINK).catch(() => Alert.alert(t('checkout.errorTitle'), t('checkout.whishOpenError')))
     }
-    router.push({
-      pathname: '/confirmation',
-      params: { phone, payMethod, orderId: data?.id, isPreorder: isPreorder ? '1' : '0' }
-    })
+    router.push({ pathname: '/confirmation', params: { phone, payMethod, orderId: data?.id, isPreorder: isPreorder ? '1' : '0' } })
   }
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+    <View style={s.container}>
+      <StatusBar barStyle="light-content" />
 
-        <TouchableOpacity onPress={() => router.back()} style={styles.back}>
-          <Text style={styles.backText}>{t('checkout.back')}</Text>
+      {/* ── Fixed Header ── */}
+      <View style={s.topBar}>
+        <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+          <Text style={s.backArrow}>←</Text>
         </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <Text style={s.topTitle}>{t('checkout.title')}</Text>
+          <Text style={s.topSub} numberOfLines={1}>🍽️  {restaurantName}</Text>
+        </View>
+        <View style={s.totalPill}>
+          <Text style={s.totalPillTxt}>${total}</Text>
+        </View>
+      </View>
 
-        <Text style={styles.title}>{t('checkout.title')}</Text>
-        <Text style={styles.restoName}>🍽️ {restaurantName}</Text>
+      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* Bannière précommande */}
+        {/* ── Preorder banner ── */}
         {isPreorder && (
-          <View style={styles.preorderBanner}>
-            <Text style={styles.preorderEmoji}>⏰</Text>
+          <View style={s.preorderBanner}>
+            <Text style={s.preorderEmoji}>⏰</Text>
             <View style={{ flex: 1 }}>
-              <Text style={styles.preorderTitle}>Précommande</Text>
-              <Text style={styles.preorderSub}>
-                Le restaurant est fermé. Ta commande sera envoyée au restaurant dès qu'il ouvrira.
-              </Text>
+              <Text style={s.preorderTitle}>Précommande</Text>
+              <Text style={s.preorderSub}>Restaurant fermé — ta commande sera envoyée à l'ouverture.</Text>
             </View>
           </View>
         )}
 
-        {/* Récap */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('checkout.summary')}</Text>
-          <View style={styles.itemsBox}>
+        {/* ── Order summary ── */}
+        <View style={s.section}>
+          <Text style={s.secLabel}>RÉCAPITULATIF</Text>
+          <View style={s.card}>
             {cartItems.map((item, i) => (
-              <View key={i} style={[styles.item, i < cartItems.length - 1 && styles.itemBorder]}>
-                <View style={styles.itemLeft}>
-                  <View style={styles.qtyBadge}>
-                    <Text style={styles.qtyText}>{item.qty}</Text>
-                  </View>
-                  <View>
-                    <Text style={styles.itemName}>{item.name}</Text>
-                    {item.selectedOptions && item.selectedOptions.length > 0 && (
-                      <Text style={styles.itemOptions}>
-                        + {item.selectedOptions.map(o => o.name).join(', ')}
-                      </Text>
-                    )}
-                  </View>
+              <View key={i} style={[s.itemRow, i < cartItems.length - 1 && s.itemRowBorder]}>
+                <View style={s.qtyBox}>
+                  <Text style={s.qtyTxt}>{item.qty}</Text>
                 </View>
-                <Text style={styles.itemPrice}>${(item.price * item.qty).toFixed(2)}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.itemName}>{item.name}</Text>
+                  {item.selectedOptions?.length > 0 && (
+                    <Text style={s.itemOpts}>+ {item.selectedOptions.map(o => o.name).join(', ')}</Text>
+                  )}
+                </View>
+                <Text style={s.itemPrice}>${(item.price * item.qty).toFixed(2)}</Text>
               </View>
             ))}
           </View>
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>{t('checkout.delivery')}</Text>
-            <Text style={styles.freeText}>{t('checkout.free')}</Text>
-          </View>
-          <View style={styles.grandRow}>
-            <Text style={styles.grandLabel}>{t('checkout.total')}</Text>
-            <Text style={styles.grandAmount}>${total}</Text>
+          <View style={s.totalsCard}>
+            <View style={s.totRow}>
+              <Text style={s.totLabel}>{t('checkout.delivery')}</Text>
+              <Text style={s.totFree}>{t('checkout.free')}</Text>
+            </View>
+            <View style={[s.totRow, s.grandRow]}>
+              <Text style={s.grandLabel}>{t('checkout.total')}</Text>
+              <Text style={s.grandAmt}>${total}</Text>
+            </View>
           </View>
         </View>
 
-        {/* Infos client */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('checkout.yourInfo')}</Text>
-          <Text style={styles.inputLabel}>{t('checkout.fullName')}</Text>
-          <TextInput
-            style={styles.input}
-            placeholder={t('checkout.fullNamePlaceholder')}
-            placeholderTextColor="#555"
-            value={name}
-            onChangeText={setName}
-          />
-          <Text style={styles.inputLabel}>{t('checkout.phone')}</Text>
-          <TextInput
-            style={styles.input}
-            placeholder={t('checkout.phonePlaceholder')}
-            placeholderTextColor="#555"
-            value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
-          />
+        {/* ── Infos client ── */}
+        <View style={s.section}>
+          <Text style={s.secLabel}>VOS INFORMATIONS</Text>
+          <View style={s.card}>
+            <View style={s.inputWrap}>
+              <Text style={s.inputLabel}>{t('checkout.fullName')}</Text>
+              <TextInput
+                style={s.input}
+                placeholder={t('checkout.fullNamePlaceholder')}
+                placeholderTextColor="#2e2e2e"
+                value={name}
+                onChangeText={setName}
+              />
+            </View>
+            <View style={[s.inputWrap, { borderTopWidth: 1, borderTopColor: BORDER }]}>
+              <Text style={s.inputLabel}>{t('checkout.phone')}</Text>
+              <TextInput
+                style={s.input}
+                placeholder={t('checkout.phonePlaceholder')}
+                placeholderTextColor="#2e2e2e"
+                value={phone}
+                onChangeText={setPhone}
+                keyboardType="phone-pad"
+              />
+            </View>
+          </View>
         </View>
 
-        {/* Adresse */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('checkout.addressSection')}</Text>
+        {/* ── Adresse ── */}
+        <View style={s.section}>
+          <Text style={s.secLabel}>ADRESSE DE LIVRAISON</Text>
           <TouchableOpacity
-            style={[styles.gpsBtn, loadingGPS && styles.gpsBtnLoading]}
+            style={[s.gpsBtn, loadingGPS && { opacity: 0.5 }, coords && s.gpsBtnDone]}
             onPress={getGPS}
             disabled={loadingGPS}
           >
-            <Text style={styles.gpsBtnText}>
+            <Text style={s.gpsBtnEmoji}>{coords ? '📌' : '📍'}</Text>
+            <Text style={[s.gpsBtnTxt, coords && s.gpsBtnTxtDone]}>
               {loadingGPS ? t('checkout.gpsLoading') : coords ? t('checkout.gpsSet') : t('checkout.gpsUse')}
             </Text>
           </TouchableOpacity>
           {coords && (
-            <View style={styles.coordsBadge}>
-              <Text style={styles.coordsText}>📌 {coords.latitude.toFixed(5)}, {coords.longitude.toFixed(5)}</Text>
+            <View style={s.coordsBox}>
+              <Text style={s.coordsTxt}>{coords.latitude.toFixed(5)}, {coords.longitude.toFixed(5)}</Text>
             </View>
           )}
-          <Text style={[styles.inputLabel, { marginTop: 12 }]}>{t('checkout.fullAddress')}</Text>
-          <TextInput
-            style={[styles.input, styles.inputMulti]}
-            placeholder={t('checkout.addressPlaceholder')}
-            placeholderTextColor="#555"
-            value={address}
-            onChangeText={setAddress}
-            multiline
-          />
+          <View style={[s.card, { marginTop: 10 }]}>
+            <View style={s.inputWrap}>
+              <Text style={s.inputLabel}>{t('checkout.fullAddress')}</Text>
+              <TextInput
+                style={[s.input, s.inputMulti]}
+                placeholder={t('checkout.addressPlaceholder')}
+                placeholderTextColor="#2e2e2e"
+                value={address}
+                onChangeText={setAddress}
+                multiline
+              />
+            </View>
+          </View>
         </View>
 
-        {/* Paiement */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('checkout.paymentSection')}</Text>
-          <View style={styles.payRow}>
+        {/* ── Paiement ── */}
+        <View style={s.section}>
+          <Text style={s.secLabel}>MODE DE PAIEMENT</Text>
+          <View style={s.payRow}>
             <TouchableOpacity
-              style={[styles.payCard, payMethod === 'cash' && styles.payCardCashActive]}
+              style={[s.payCard, payMethod === 'cash' && s.payCardOrangeActive]}
               onPress={() => setPayMethod('cash')}
+              activeOpacity={0.8}
             >
-              <Text style={styles.payEmoji}>💵</Text>
-              <Text style={[styles.payLabel, payMethod === 'cash' && styles.payLabelCash]}>{t('checkout.cash')}</Text>
-              <Text style={styles.paySub}>{t('checkout.cashSub')}</Text>
-              {payMethod === 'cash' && <View style={styles.checkDot} />}
+              {payMethod === 'cash' && <View style={s.payCheckDot} />}
+              <Text style={s.payEmoji}>💵</Text>
+              <Text style={[s.payCardLabel, payMethod === 'cash' && { color: ORANGE }]}>{t('checkout.cash')}</Text>
+              <Text style={s.payCardSub}>{t('checkout.cashSub')}</Text>
             </TouchableOpacity>
-
             <TouchableOpacity
-              style={[styles.payCard, payMethod === 'whish' && styles.payCardWhishActive]}
+              style={[s.payCard, payMethod === 'whish' && s.payCardWhishActive]}
               onPress={() => setPayMethod('whish')}
+              activeOpacity={0.8}
             >
-              <Text style={styles.payEmoji}>📱</Text>
-              <Text style={[styles.payLabel, payMethod === 'whish' && styles.payLabelWhish]}>{t('checkout.whish')}</Text>
-              <Text style={styles.paySub}>{t('checkout.whishSub')}</Text>
-              {payMethod === 'whish' && <View style={[styles.checkDot, styles.checkDotWhish]} />}
+              {payMethod === 'whish' && <View style={[s.payCheckDot, { backgroundColor: '#6C3EE8' }]} />}
+              <Text style={s.payEmoji}>📱</Text>
+              <Text style={[s.payCardLabel, payMethod === 'whish' && { color: '#6C3EE8' }]}>{t('checkout.whish')}</Text>
+              <Text style={s.payCardSub}>{t('checkout.whishSub')}</Text>
             </TouchableOpacity>
           </View>
 
           {payMethod === 'whish' && (
-            <View style={styles.whishInfo}>
-              <Text style={styles.whishInfoTitle}>{t('checkout.whishHow')}</Text>
-              <Text style={styles.whishStep}>{t('checkout.whishStep1')}</Text>
-              <Text style={styles.whishStep}>{t('checkout.whishStep2')}</Text>
-              <Text style={styles.whishStep}>{t('checkout.whishStep3')}</Text>
-              <View style={styles.whishAmountBox}>
-                <Text style={styles.whishAmountText}>💰 ${total}</Text>
+            <View style={s.whishBox}>
+              <Text style={s.whishTitle}>{t('checkout.whishHow')}</Text>
+              {[t('checkout.whishStep1'), t('checkout.whishStep2'), t('checkout.whishStep3')].map((step, i) => (
+                <Text key={i} style={s.whishStep}>{step}</Text>
+              ))}
+              <View style={s.whishAmtBox}>
+                <Text style={s.whishAmt}>💰  ${total}</Text>
               </View>
-              <Text style={styles.whishStep}>{t('checkout.whishStep4')}</Text>
-              <Text style={styles.whishStep}>{t('checkout.whishStep5')}</Text>
+              {[t('checkout.whishStep4'), t('checkout.whishStep5')].map((step, i) => (
+                <Text key={i} style={s.whishStep}>{step}</Text>
+              ))}
             </View>
           )}
         </View>
 
-        {/* Note */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('checkout.noteSection')}</Text>
-          <TextInput
-            style={[styles.input, styles.inputMulti]}
-            placeholder={t('checkout.notePlaceholder')}
-            placeholderTextColor="#555"
-            value={note}
-            onChangeText={setNote}
-            multiline
-          />
+        {/* ── Note ── */}
+        <View style={s.section}>
+          <Text style={s.secLabel}>NOTE POUR LE RESTAURANT</Text>
+          <View style={s.card}>
+            <View style={s.inputWrap}>
+              <TextInput
+                style={[s.input, s.inputMulti]}
+                placeholder={t('checkout.notePlaceholder')}
+                placeholderTextColor="#2e2e2e"
+                value={note}
+                onChangeText={setNote}
+                multiline
+              />
+            </View>
+          </View>
         </View>
 
-        {/* Bouton commande */}
+        {/* ── Order button ── */}
         <TouchableOpacity
           style={[
-            styles.orderBtn,
-            payMethod === 'whish' && !isPreorder && styles.orderBtnWhish,
-            isPreorder && styles.orderBtnPreorder,
-            loading && styles.orderBtnLoading
+            s.orderBtn,
+            payMethod === 'whish' && !isPreorder && s.orderBtnWhish,
+            isPreorder && s.orderBtnPreorder,
+            loading && { opacity: 0.6 }
           ]}
           onPress={placeOrder}
           disabled={loading}
+          activeOpacity={0.85}
         >
-          <Text style={styles.orderBtnText}>
+          <Text style={s.orderBtnTxt}>
             {loading
-              ? '⏳ Envoi en cours...'
+              ? '⏳  Envoi en cours...'
               : isPreorder
-                ? `⏰ Précommander — $${total}`
+                ? `⏰  Précommander — $${total}`
                 : payMethod === 'whish'
-                  ? `📱 ${t('checkout.orderBtnWhish')} — $${total}`
-                  : `🛵 ${t('checkout.orderBtn')} — $${total}`}
+                  ? `📱  ${t('checkout.orderBtnWhish')} — $${total}`
+                  : `🛵  ${t('checkout.orderBtn')} — $${total}`}
           </Text>
         </TouchableOpacity>
 
@@ -305,67 +314,100 @@ export default function CheckoutScreen() {
   )
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#111' },
-  scroll: { padding: 20, paddingTop: 60 },
-  back: { marginBottom: 20 },
-  backText: { color: '#FF6B35', fontWeight: '600', fontSize: 15 },
-  title: { color: '#fff', fontSize: 26, fontWeight: 'bold', marginBottom: 4 },
-  restoName: { color: '#888', fontSize: 14, marginBottom: 24 },
+const s = StyleSheet.create({
+  container:    { flex: 1, backgroundColor: BG },
+
+  // Top bar
+  topBar: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: '#0c0c0c',
+    paddingTop: 58, paddingBottom: 16, paddingHorizontal: 18,
+    borderBottomWidth: 1, borderBottomColor: BORDER,
+  },
+  backBtn:      { width: 38, height: 38, borderRadius: 12, backgroundColor: CARD, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: BORDER },
+  backArrow:    { color: WHITE, fontSize: 18 },
+  topTitle:     { color: WHITE, fontSize: 17, fontWeight: '700' },
+  topSub:       { color: '#444', fontSize: 12, marginTop: 2 },
+  totalPill:    { backgroundColor: ORANGE + '18', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: ORANGE + '40' },
+  totalPillTxt: { color: ORANGE, fontWeight: '800', fontSize: 15 },
+
+  scroll:       { padding: 18, paddingTop: 20 },
+
+  // Preorder
   preorderBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: '#1a1a2e', borderRadius: 14,
-    padding: 16, marginBottom: 24,
-    borderWidth: 1, borderColor: '#3a3a6a'
+    backgroundColor: '#0e0e2a', borderRadius: 16, padding: 16,
+    marginBottom: 20, borderWidth: 1, borderColor: '#2a2a6a',
   },
-  preorderEmoji: { fontSize: 28 },
-  preorderTitle: { color: '#9a98ff', fontWeight: '700', fontSize: 15, marginBottom: 3 },
-  preorderSub: { color: '#5a5a8a', fontSize: 13, lineHeight: 18 },
-  section: { marginBottom: 28 },
-  sectionTitle: { color: '#fff', fontSize: 17, fontWeight: 'bold', marginBottom: 14 },
-  itemsBox: { backgroundColor: '#1e1e1e', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#2a2a2a', marginBottom: 10 },
-  item: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14 },
-  itemBorder: { borderBottomWidth: 1, borderBottomColor: '#2a2a2a' },
-  itemLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  qtyBadge: { backgroundColor: '#FF6B35', borderRadius: 8, width: 28, height: 28, justifyContent: 'center', alignItems: 'center' },
-  qtyText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
-  itemName: { color: '#fff', fontSize: 14 },
-  itemPrice: { color: '#FF6B35', fontWeight: '600' },
-  itemOptions: { color: '#9C27B0', fontSize: 11, marginTop: 2 },
-  totalRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, paddingVertical: 6 },
-  totalLabel: { color: '#888', fontSize: 14 },
-  freeText: { color: '#4CAF50', fontWeight: 'bold', fontSize: 14 },
-  grandRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#2a2a2a', marginTop: 4 },
-  grandLabel: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
-  grandAmount: { color: '#FF6B35', fontSize: 20, fontWeight: 'bold' },
-  inputLabel: { color: '#888', fontSize: 12, marginBottom: 6 },
-  input: { backgroundColor: '#1e1e1e', borderRadius: 12, padding: 14, color: '#fff', fontSize: 15, borderWidth: 1, borderColor: '#2a2a2a', marginBottom: 12 },
-  inputMulti: { height: 85, textAlignVertical: 'top' },
-  gpsBtn: { backgroundColor: '#0d2e1a', borderRadius: 12, padding: 15, borderWidth: 1, borderColor: '#1a5c2e', alignItems: 'center', marginBottom: 8 },
-  gpsBtnLoading: { opacity: 0.6 },
-  gpsBtnText: { color: '#4CAF50', fontWeight: '700', fontSize: 14 },
-  coordsBadge: { backgroundColor: '#0d2e1a', borderRadius: 8, padding: 8, marginBottom: 8, borderWidth: 1, borderColor: '#1a5c2e' },
-  coordsText: { color: '#4CAF50', fontSize: 11, textAlign: 'center' },
-  payRow: { flexDirection: 'row', gap: 12 },
-  payCard: { flex: 1, backgroundColor: '#1e1e1e', borderRadius: 16, padding: 16, alignItems: 'center', borderWidth: 2, borderColor: '#2a2a2a' },
-  payCardCashActive: { borderColor: '#FF6B35', backgroundColor: '#2a1a10' },
-  payCardWhishActive: { borderColor: '#6C3EE8', backgroundColor: '#1a1030' },
-  payEmoji: { fontSize: 28, marginBottom: 6 },
-  payLabel: { color: '#888', fontWeight: 'bold', fontSize: 15, marginBottom: 2 },
-  payLabelCash: { color: '#FF6B35' },
-  payLabelWhish: { color: '#6C3EE8' },
-  paySub: { color: '#555', fontSize: 11 },
-  checkDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF6B35', marginTop: 8 },
-  checkDotWhish: { backgroundColor: '#6C3EE8' },
-  whishInfo: { marginTop: 14, backgroundColor: '#1a1030', borderRadius: 14, padding: 16, borderWidth: 1, borderColor: '#6C3EE833' },
-  whishInfoTitle: { color: '#9C7EE8', fontWeight: 'bold', fontSize: 14, marginBottom: 10 },
-  whishStep: { color: '#aaa', fontSize: 13, marginBottom: 7, lineHeight: 20 },
-  whishAmountBox: { backgroundColor: '#6C3EE822', borderRadius: 10, padding: 12, alignItems: 'center', marginVertical: 8, borderWidth: 1, borderColor: '#6C3EE8' },
-  whishAmountText: { color: '#a07af0', fontWeight: 'bold', fontSize: 22 },
-  orderBtn: { backgroundColor: '#FF6B35', borderRadius: 16, padding: 18, alignItems: 'center', shadowColor: '#FF6B35', shadowOpacity: 0.4, shadowRadius: 12, elevation: 8 },
-  orderBtnWhish: { backgroundColor: '#6C3EE8', shadowColor: '#6C3EE8' },
+  preorderEmoji:  { fontSize: 26 },
+  preorderTitle:  { color: '#9a98ff', fontWeight: '700', fontSize: 14, marginBottom: 3 },
+  preorderSub:    { color: '#4a4a7a', fontSize: 12, lineHeight: 18 },
+
+  // Sections
+  section:      { marginBottom: 24 },
+  secLabel:     { color: '#2a2a2a', fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 10, paddingLeft: 2 },
+  card:         { backgroundColor: CARD, borderRadius: 18, borderWidth: 1, borderColor: BORDER, overflow: 'hidden' },
+
+  // Items
+  itemRow:      { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
+  itemRowBorder:{ borderBottomWidth: 1, borderBottomColor: BORDER },
+  qtyBox:       { width: 28, height: 28, borderRadius: 8, backgroundColor: ORANGE, justifyContent: 'center', alignItems: 'center' },
+  qtyTxt:       { color: WHITE, fontWeight: '800', fontSize: 12 },
+  itemName:     { color: WHITE, fontSize: 14, fontWeight: '600' },
+  itemOpts:     { color: '#7a4aaa', fontSize: 11, marginTop: 2 },
+  itemPrice:    { color: ORANGE, fontWeight: '700', fontSize: 14 },
+
+  // Totals
+  totalsCard:   { backgroundColor: CARD, borderRadius: 18, borderWidth: 1, borderColor: BORDER, marginTop: 8, padding: 14 },
+  totRow:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  totLabel:     { color: '#444', fontSize: 14 },
+  totFree:      { color: '#4CAF50', fontWeight: '700', fontSize: 14 },
+  grandRow:     { marginBottom: 0, paddingTop: 12, borderTopWidth: 1, borderTopColor: BORDER },
+  grandLabel:   { color: WHITE, fontSize: 17, fontWeight: '700' },
+  grandAmt:     { color: ORANGE, fontSize: 20, fontWeight: '800' },
+
+  // Inputs
+  inputWrap:    { padding: 14 },
+  inputLabel:   { color: '#333', fontSize: 10, fontWeight: '700', letterSpacing: 0.8, marginBottom: 8 },
+  input:        { color: WHITE, fontSize: 15, paddingVertical: 0 },
+  inputMulti:   { height: 70, textAlignVertical: 'top' },
+
+  // GPS
+  gpsBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: '#0a1f10', borderRadius: 14, padding: 14,
+    borderWidth: 1, borderColor: '#1a4a20',
+  },
+  gpsBtnDone:   { backgroundColor: '#0a2010', borderColor: '#2a6a30' },
+  gpsBtnEmoji:  { fontSize: 16 },
+  gpsBtnTxt:    { color: '#4CAF50', fontWeight: '700', fontSize: 14 },
+  gpsBtnTxtDone:{ color: '#66BB6A' },
+  coordsBox:    { backgroundColor: '#0a1f10', borderRadius: 10, padding: 8, marginTop: 6, borderWidth: 1, borderColor: '#1a4a20', alignItems: 'center' },
+  coordsTxt:    { color: '#4CAF50', fontSize: 11 },
+
+  // Payment
+  payRow:       { flexDirection: 'row', gap: 10 },
+  payCard:      { flex: 1, backgroundColor: CARD, borderRadius: 18, padding: 16, alignItems: 'center', borderWidth: 2, borderColor: BORDER, position: 'relative' },
+  payCardOrangeActive: { borderColor: ORANGE, backgroundColor: '#1a0c08' },
+  payCardWhishActive:  { borderColor: '#6C3EE8', backgroundColor: '#100a1a' },
+  payCheckDot:  { position: 'absolute', top: 10, right: 10, width: 8, height: 8, borderRadius: 4, backgroundColor: ORANGE },
+  payEmoji:     { fontSize: 26, marginBottom: 8 },
+  payCardLabel: { color: '#666', fontWeight: '700', fontSize: 14, marginBottom: 3 },
+  payCardSub:   { color: '#333', fontSize: 11, textAlign: 'center' },
+  whishBox:     { marginTop: 10, backgroundColor: '#0e0820', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#6C3EE830' },
+  whishTitle:   { color: '#9C7EE8', fontWeight: '700', fontSize: 14, marginBottom: 10 },
+  whishStep:    { color: '#666', fontSize: 13, marginBottom: 6, lineHeight: 20 },
+  whishAmtBox:  { backgroundColor: '#6C3EE820', borderRadius: 12, padding: 12, alignItems: 'center', marginVertical: 8, borderWidth: 1, borderColor: '#6C3EE8' },
+  whishAmt:     { color: '#a07af0', fontWeight: '800', fontSize: 22 },
+
+  // Order button
+  orderBtn: {
+    backgroundColor: ORANGE, borderRadius: 18, padding: 18,
+    alignItems: 'center',
+    shadowColor: ORANGE, shadowOpacity: 0.35, shadowRadius: 16, elevation: 10,
+  },
+  orderBtnWhish:    { backgroundColor: '#6C3EE8', shadowColor: '#6C3EE8' },
   orderBtnPreorder: { backgroundColor: '#4a48a0', shadowColor: '#4a48a0' },
-  orderBtnLoading: { opacity: 0.7 },
-  orderBtnText: { color: '#fff', fontSize: 17, fontWeight: 'bold' },
+  orderBtnTxt:      { color: WHITE, fontSize: 17, fontWeight: '800', letterSpacing: -0.3 },
 })
 

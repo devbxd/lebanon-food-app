@@ -1,7 +1,9 @@
 import * as Location from 'expo-location'
 import { useRouter } from 'expo-router'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
+  Animated,
+  Dimensions,
   Image,
   ScrollView,
   StatusBar,
@@ -14,12 +16,19 @@ import {
 import { useTranslation } from '../../lib/LanguageContext'
 import { supabase } from '../../lib/supabase'
 
-const CATEGORIES = ['Tout', 'Burgers', 'Shawarma', 'Pizza', 'Healthy', 'Sushi', 'Grillades']
+const { width } = Dimensions.get('window')
 
+const CATEGORIES = ['Tout', 'Burgers', 'Shawarma', 'Pizza', 'Healthy', 'Sushi', 'Grillades']
 const CAT_ICONS = {
   'Tout': '🍽️', 'Burgers': '🍔', 'Shawarma': '🌯',
   'Pizza': '🍕', 'Healthy': '🥗', 'Sushi': '🍣', 'Grillades': '🥩',
 }
+
+const ORANGE = '#FF6B35'
+const BG = '#0a0a0a'
+const CARD = '#131313'
+const BORDER = '#1c1c1c'
+const WHITE = '#ffffff'
 
 export default function HomeScreen() {
   const { t } = useTranslation()
@@ -30,10 +39,18 @@ export default function HomeScreen() {
   const [user, setUser] = useState(null)
   const router = useRouter()
 
+  const headerFade = useRef(new Animated.Value(0)).current
+  const headerSlide = useRef(new Animated.Value(-20)).current
+
   useEffect(() => {
     fetchRestaurants()
     getLocation()
     getUser()
+
+    Animated.parallel([
+      Animated.timing(headerFade, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.timing(headerSlide, { toValue: 0, duration: 600, useNativeDriver: true }),
+    ]).start()
 
     const channelName = `restaurants-open-status-${Date.now()}`
     const channel = supabase
@@ -43,9 +60,7 @@ export default function HomeScreen() {
       })
       .subscribe()
 
-    return () => {
-      supabase.removeChannel(channel)
-    }
+    return () => { supabase.removeChannel(channel) }
   }, [])
 
   async function getUser() {
@@ -83,52 +98,42 @@ export default function HomeScreen() {
 
   function RestoFeaturedCard({ resto }) {
     const isOpen = resto.is_open === true || resto.is_open === 'true'
-
     return (
       <TouchableOpacity
-        style={styles.featuredCard}
+        style={s.featCard}
         onPress={() => router.push(`/restaurants/${resto.id}`)}
-        activeOpacity={0.9}
+        activeOpacity={0.92}
       >
-        <Image source={{ uri: resto.image_url }} style={[styles.featuredImg, !isOpen && styles.imgClosed]} />
-        <View style={styles.featuredOverlay} />
+        <Image source={{ uri: resto.image_url }} style={[s.featImg, !isOpen && s.imgDim]} />
+        {/* gradient overlay */}
+        <View style={s.featGradient} />
 
-        {!isOpen && (
-          <View style={styles.closedOverlay}>
-            <View style={styles.closedPill}>
-              <Text style={styles.closedPillText}>🔴 Fermé — Précommande disponible</Text>
-            </View>
+        {/* top badges */}
+        <View style={s.featTopRow}>
+          <View style={s.catTag}>
+            <Text style={s.catTagTxt}>{CAT_ICONS[resto.category] || '🍽️'}  {resto.category}</Text>
           </View>
-        )}
-
-        <View style={styles.featuredBadge}>
-          <Text style={styles.featuredBadgeText}>{CAT_ICONS[resto.category] || '🍽️'} {resto.category}</Text>
+          <View style={[s.statusTag, isOpen ? s.statusOpen : s.statusClosed]}>
+            <View style={[s.statusDot, { backgroundColor: isOpen ? '#4CAF50' : '#9a98ff' }]} />
+            <Text style={[s.statusTxt, { color: isOpen ? '#4CAF50' : '#9a98ff' }]}>
+              {isOpen ? t('home.openNow') : '⏰ Précommande'}
+            </Text>
+          </View>
         </View>
 
-        {isOpen ? (
-          <View style={styles.openBadge}>
-            <View style={styles.openDot} />
-            <Text style={styles.openText}>{t('home.openNow')}</Text>
-          </View>
-        ) : (
-          <View style={[styles.openBadge, styles.closedBadge]}>
-            <View style={styles.closedDot} />
-            <Text style={styles.closedText}>⏰ Précommande</Text>
-          </View>
-        )}
-
-        <View style={styles.featuredBody}>
-          <Text style={styles.featuredName}>{resto.name}</Text>
-          <Text style={styles.featuredDesc} numberOfLines={1}>{resto.description}</Text>
+        {/* bottom info */}
+        <View style={s.featBottom}>
+          <Text style={s.featName}>{resto.name}</Text>
+          <Text style={s.featDesc} numberOfLines={1}>{resto.description}</Text>
           {isOpen ? (
-            <View style={styles.featuredMeta}>
-              <View style={styles.metaPill}><Text style={styles.metaText}>⏱ {resto.delivery_time}</Text></View>
-              <View style={styles.metaPill}><Text style={styles.metaText}>💵 Min ${resto.min_order}</Text></View>
+            <View style={s.featMetaRow}>
+              <View style={s.metaChip}><Text style={s.metaChipTxt}>⏱  {resto.delivery_time}</Text></View>
+              <View style={s.metaChip}><Text style={s.metaChipTxt}>💵  Min ${resto.min_order}</Text></View>
             </View>
           ) : (
-            <View style={styles.featuredMeta}>
-              <View style={[styles.metaPill, styles.preorderPill]}>
-                <Text style={styles.preorderPillText}>⏰ Commandez à l'avance</Text>
+            <View style={s.featMetaRow}>
+              <View style={[s.metaChip, s.metaChipPreorder]}>
+                <Text style={s.metaChipPreorderTxt}>Commandez à l'avance</Text>
               </View>
             </View>
           )}
@@ -139,45 +144,44 @@ export default function HomeScreen() {
 
   function RestoCompactCard({ resto }) {
     const isOpen = resto.is_open === true || resto.is_open === 'true'
-
     return (
       <TouchableOpacity
-        style={styles.compactCard}
+        style={s.compCard}
         onPress={() => router.push(`/restaurants/${resto.id}`)}
         activeOpacity={0.85}
       >
-        <View>
-          <Image source={{ uri: resto.image_url }} style={[styles.compactImg, !isOpen && styles.imgClosed]} />
+        <View style={s.compImgWrap}>
+          <Image source={{ uri: resto.image_url }} style={[s.compImg, !isOpen && s.imgDim]} />
           {!isOpen && (
-            <View style={styles.compactClosedOverlay}>
-              <Text style={styles.compactClosedText}>⏰</Text>
+            <View style={s.compImgOverlay}>
+              <Text style={{ fontSize: 18 }}>⏰</Text>
             </View>
           )}
         </View>
-        <View style={styles.compactBody}>
-          <View style={styles.compactTop}>
-            <Text style={styles.compactName}>{resto.name}</Text>
-            <View style={styles.compactBadge}>
-              <Text style={styles.compactBadgeText}>{CAT_ICONS[resto.category] || '🍽️'}</Text>
+        <View style={s.compBody}>
+          <View style={s.compTopRow}>
+            <Text style={s.compName} numberOfLines={1}>{resto.name}</Text>
+            <View style={s.compCatBadge}>
+              <Text style={{ fontSize: 13 }}>{CAT_ICONS[resto.category] || '🍽️'}</Text>
             </View>
           </View>
-          <Text style={styles.compactDesc} numberOfLines={1}>{resto.description}</Text>
-          <View style={styles.compactMeta}>
+          <Text style={s.compDesc} numberOfLines={1}>{resto.description}</Text>
+          <View style={s.compMeta}>
             {isOpen ? (
               <>
-                <Text style={styles.compactMetaText}>⏱ {resto.delivery_time}</Text>
-                <Text style={styles.compactMetaDot}>·</Text>
-                <Text style={styles.compactMetaText}>💵 Min ${resto.min_order}</Text>
-                <Text style={styles.compactMetaDot}>·</Text>
-                <View style={styles.openSmallBadge}>
-                  <View style={styles.openDotSmall} />
-                  <Text style={styles.openSmallText}>Ouvert</Text>
+                <Text style={s.compMetaTxt}>⏱  {resto.delivery_time}</Text>
+                <Text style={s.compMetaDot}>·</Text>
+                <Text style={s.compMetaTxt}>💵  Min ${resto.min_order}</Text>
+                <Text style={s.compMetaDot}>·</Text>
+                <View style={s.openDotRow}>
+                  <View style={[s.dot, { backgroundColor: '#4CAF50' }]} />
+                  <Text style={[s.compMetaTxt, { color: '#4CAF50' }]}>Ouvert</Text>
                 </View>
               </>
             ) : (
-              <View style={styles.openSmallBadge}>
-                <View style={styles.closedDotSmall} />
-                <Text style={styles.closedSmallText}>⏰ Précommande</Text>
+              <View style={s.openDotRow}>
+                <View style={[s.dot, { backgroundColor: '#9a98ff' }]} />
+                <Text style={[s.compMetaTxt, { color: '#9a98ff' }]}>Précommande</Text>
               </View>
             )}
           </View>
@@ -187,90 +191,99 @@ export default function HomeScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={s.container}>
       <StatusBar barStyle="light-content" />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 50 }}>
 
-        <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <View>
-              <Text style={styles.greeting}>
+        {/* ── Header ── */}
+        <Animated.View style={[s.header, { opacity: headerFade, transform: [{ translateY: headerSlide }] }]}>
+          <View style={s.headerTopRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.greeting}>
                 {firstName ? `Salut ${firstName} 👋` : 'Bonsoir 👋'}
               </Text>
-              <Text style={styles.title}>Qu'est-ce qui{'\n'}te fait envie ?</Text>
+              <Text style={s.heroTitle}>Qu'est-ce qui{'\n'}te fait envie ?</Text>
             </View>
-            <View style={styles.headerRight}>
-              {location && (
-                <View style={styles.locationPill}>
-                  <Text style={styles.locationPin}>📍</Text>
-                  <Text style={styles.locationText}>{location}</Text>
-                </View>
-              )}
-            </View>
+            {location && (
+              <View style={s.locPill}>
+                <Text style={s.locPin}>📍</Text>
+                <Text style={s.locTxt} numberOfLines={1}>{location}</Text>
+              </View>
+            )}
           </View>
-          <View style={styles.searchBox}>
-            <Text style={styles.searchIcon}>🔍</Text>
+
+          {/* Search */}
+          <View style={s.searchBar}>
+            <Text style={s.searchIcon}>🔍</Text>
             <TextInput
-              style={styles.searchInput}
+              style={s.searchInput}
               placeholder={t('home.searchPlaceholder')}
-              placeholderTextColor="#555"
+              placeholderTextColor="#3a3a3a"
               value={search}
               onChangeText={setSearch}
             />
             {search.length > 0 && (
-              <TouchableOpacity onPress={() => setSearch('')}>
-                <Text style={styles.clearBtn}>✕</Text>
+              <TouchableOpacity onPress={() => setSearch('')} style={s.clearBtn}>
+                <Text style={s.clearTxt}>✕</Text>
               </TouchableOpacity>
             )}
           </View>
-        </View>
+        </Animated.View>
 
+        {/* ── Categories ── */}
         <ScrollView
           horizontal showsHorizontalScrollIndicator={false}
-          style={styles.catScroll}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 4 }}
+          style={s.catScroll}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 6 }}
         >
           {CATEGORIES.map(cat => (
             <TouchableOpacity
               key={cat}
-              style={[styles.catChip, selectedCat === cat && styles.catChipActive]}
+              style={[s.catChip, selectedCat === cat && s.catChipActive]}
               onPress={() => setSelectedCat(cat)}
               activeOpacity={0.7}
             >
-              <Text style={styles.catIcon}>{CAT_ICONS[cat]}</Text>
-              <Text style={[styles.catText, selectedCat === cat && styles.catTextActive]}>
+              <Text style={s.catEmoji}>{CAT_ICONS[cat]}</Text>
+              <Text style={[s.catTxt, selectedCat === cat && s.catTxtActive]}>
                 {getCatLabel(cat)}
               </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
 
+        {/* ── Empty state ── */}
         {filtered.length === 0 && (
-          <View style={styles.emptyBox}>
-            <Text style={styles.emptyEmoji}>🍽️</Text>
-            <Text style={styles.emptyTitle}>{t('home.noRestaurants')}</Text>
-            <Text style={styles.emptySubtitle}>Essaie une autre catégorie</Text>
+          <View style={s.emptyBox}>
+            <Text style={s.emptyEmoji}>🍽️</Text>
+            <Text style={s.emptyTitle}>{t('home.noRestaurants')}</Text>
+            <Text style={s.emptySub}>Essaie une autre catégorie</Text>
           </View>
         )}
 
+        {/* ── Featured ── */}
         {featured.length > 0 && (
           <>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>
-                {selectedCat === 'Tout' ? '⭐ À la une' : `${CAT_ICONS[selectedCat]} ${getCatLabel(selectedCat)}`}
+            <View style={s.secRow}>
+              <Text style={s.secTitle}>
+                {selectedCat === 'Tout' ? '⭐  À la une' : `${CAT_ICONS[selectedCat]}  ${getCatLabel(selectedCat)}`}
               </Text>
-              {filtered.length > 0 && <Text style={styles.sectionCount}>{filtered.length} restos</Text>}
+              {filtered.length > 0 && (
+                <View style={s.countBadge}>
+                  <Text style={s.countTxt}>{filtered.length} restos</Text>
+                </View>
+              )}
             </View>
-            {featured.map(resto => <RestoFeaturedCard key={resto.id} resto={resto} />)}
+            {featured.map(r => <RestoFeaturedCard key={r.id} resto={r} />)}
           </>
         )}
 
+        {/* ── Rest ── */}
         {rest.length > 0 && (
           <>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>🔥 Autres restos</Text>
+            <View style={s.secRow}>
+              <Text style={s.secTitle}>🔥  Autres restos</Text>
             </View>
-            {rest.map(resto => <RestoCompactCard key={resto.id} resto={resto} />)}
+            {rest.map(r => <RestoCompactCard key={r.id} resto={r} />)}
           </>
         )}
       </ScrollView>
@@ -278,73 +291,82 @@ export default function HomeScreen() {
   )
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#111' },
-  header: { backgroundColor: '#1a1a1a', paddingTop: 60, paddingHorizontal: 20, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: '#222' },
-  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 },
-  headerRight: { alignItems: 'flex-end', paddingTop: 4 },
-  greeting: { color: '#888', fontSize: 14, marginBottom: 4 },
-  title: { color: '#fff', fontSize: 28, fontWeight: '800', lineHeight: 34, letterSpacing: -0.5 },
-  locationPill: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#222', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: '#2a2a2a' },
-  locationPin: { fontSize: 11 },
-  locationText: { color: '#888', fontSize: 12, fontWeight: '500' },
-  searchBox: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#222', borderRadius: 14, paddingHorizontal: 16, paddingVertical: 13, borderWidth: 1, borderColor: '#2a2a2a' },
-  searchIcon: { fontSize: 16 },
-  searchInput: { flex: 1, color: '#fff', fontSize: 15 },
-  clearBtn: { color: '#555', fontSize: 16, paddingLeft: 4 },
-  catScroll: { marginTop: 16, marginBottom: 4 },
-  catChip: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#1a1a1a', borderRadius: 24, paddingHorizontal: 14, paddingVertical: 9, marginRight: 8, borderWidth: 1, borderColor: '#2a2a2a' },
-  catChipActive: { backgroundColor: '#FF6B35', borderColor: '#FF6B35' },
-  catIcon: { fontSize: 14 },
-  catText: { color: '#777', fontSize: 13, fontWeight: '500' },
-  catTextActive: { color: '#fff', fontWeight: '700' },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 24, marginBottom: 14 },
-  sectionTitle: { color: '#fff', fontSize: 18, fontWeight: '700', letterSpacing: -0.3 },
-  sectionCount: { color: '#555', fontSize: 13 },
-  featuredCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: 22, overflow: 'hidden', backgroundColor: '#1e1e1e', elevation: 4, shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 10 },
-  featuredImg: { width: '100%', height: 210 },
-  featuredOverlay: { ...StyleSheet.absoluteFillObject, height: 210, backgroundColor: 'rgba(0,0,0,0.35)' },
-  featuredBadge: { position: 'absolute', top: 14, left: 14, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
-  featuredBadgeText: { color: '#fff', fontSize: 12, fontWeight: '600' },
-  openBadge: { position: 'absolute', top: 14, right: 14, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(74,154,74,0.4)' },
-  openDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#4CAF50' },
-  openText: { color: '#4CAF50', fontSize: 11, fontWeight: '600' },
-  featuredBody: { padding: 16 },
-  featuredName: { color: '#fff', fontSize: 20, fontWeight: '800', letterSpacing: -0.3 },
-  featuredDesc: { color: '#888', fontSize: 13, marginTop: 4 },
-  featuredMeta: { flexDirection: 'row', gap: 8, marginTop: 12 },
-  metaPill: { backgroundColor: '#2a2a2a', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
-  metaText: { color: '#bbb', fontSize: 12 },
-  preorderPill: { backgroundColor: '#1a1a2e', borderColor: '#3a3a6a', borderWidth: 1 },
-  preorderPillText: { color: '#9a98ff', fontSize: 12, fontWeight: '600' },
-  compactCard: { flexDirection: 'row', marginHorizontal: 16, marginBottom: 12, borderRadius: 16, overflow: 'hidden', backgroundColor: '#1a1a1a', borderWidth: 1, borderColor: '#222' },
-  compactImg: { width: 100, height: 100 },
-  compactBody: { flex: 1, padding: 12, justifyContent: 'center' },
-  compactTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
-  compactName: { color: '#fff', fontSize: 15, fontWeight: '700', flex: 1 },
-  compactBadge: { backgroundColor: '#222', borderRadius: 8, width: 28, height: 28, justifyContent: 'center', alignItems: 'center' },
-  compactBadgeText: { fontSize: 14 },
-  compactDesc: { color: '#666', fontSize: 12, marginBottom: 8 },
-  compactMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
-  compactMetaText: { color: '#777', fontSize: 11 },
-  compactMetaDot: { color: '#444', fontSize: 11 },
-  openSmallBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  openDotSmall: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#4CAF50' },
-  openSmallText: { color: '#4CAF50', fontSize: 11, fontWeight: '600' },
-  imgClosed: { opacity: 0.5 },
-  closedOverlay: { ...StyleSheet.absoluteFillObject, height: 210, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center' },
-  closedPill: { backgroundColor: 'rgba(0,0,0,0.8)', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8, borderWidth: 1, borderColor: '#7a78cf44' },
-  closedPillText: { color: '#9a98ff', fontSize: 13, fontWeight: '700' },
-  closedBadge: { borderColor: 'rgba(122,120,207,0.4)' },
-  closedDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#9a98ff' },
-  closedText: { color: '#9a98ff', fontSize: 11, fontWeight: '600' },
-  compactClosedOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
-  compactClosedText: { fontSize: 20 },
-  closedDotSmall: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#9a98ff' },
-  closedSmallText: { color: '#9a98ff', fontSize: 11, fontWeight: '600' },
-  emptyBox: { alignItems: 'center', marginTop: 80, paddingHorizontal: 40 },
-  emptyEmoji: { fontSize: 52, marginBottom: 16 },
-  emptyTitle: { color: '#555', fontSize: 17, fontWeight: '600', textAlign: 'center' },
-  emptySubtitle: { color: '#333', fontSize: 13, marginTop: 6, textAlign: 'center' },
+const s = StyleSheet.create({
+  container:      { flex: 1, backgroundColor: BG },
+
+  // Header
+  header:         { backgroundColor: '#0f0f0f', paddingTop: 62, paddingHorizontal: 20, paddingBottom: 22, borderBottomWidth: 1, borderBottomColor: BORDER },
+  headerTopRow:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 22 },
+  greeting:       { color: '#444', fontSize: 13, fontWeight: '500', marginBottom: 6, letterSpacing: 0.3 },
+  heroTitle:      { color: WHITE, fontSize: 30, fontWeight: '800', lineHeight: 36, letterSpacing: -0.8 },
+  locPill:        { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: CARD, borderRadius: 22, paddingHorizontal: 11, paddingVertical: 7, borderWidth: 1, borderColor: BORDER, maxWidth: 120 },
+  locPin:         { fontSize: 11 },
+  locTxt:         { color: '#555', fontSize: 11, fontWeight: '600' },
+  searchBar:      { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#111', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14, borderWidth: 1, borderColor: BORDER },
+  searchIcon:     { fontSize: 15 },
+  searchInput:    { flex: 1, color: WHITE, fontSize: 15 },
+  clearBtn:       { padding: 2 },
+  clearTxt:       { color: '#333', fontSize: 15 },
+
+  // Categories
+  catScroll:      { marginTop: 14, marginBottom: 2 },
+  catChip:        { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: CARD, borderRadius: 26, paddingHorizontal: 14, paddingVertical: 9, marginRight: 8, borderWidth: 1, borderColor: BORDER },
+  catChipActive:  { backgroundColor: ORANGE, borderColor: ORANGE },
+  catEmoji:       { fontSize: 14 },
+  catTxt:         { color: '#555', fontSize: 13, fontWeight: '600' },
+  catTxtActive:   { color: WHITE, fontWeight: '700' },
+
+  // Section headers
+  secRow:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, marginTop: 26, marginBottom: 14 },
+  secTitle:       { color: WHITE, fontSize: 17, fontWeight: '800', letterSpacing: -0.3 },
+  countBadge:     { backgroundColor: '#1a1a1a', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: BORDER },
+  countTxt:       { color: '#444', fontSize: 12, fontWeight: '600' },
+
+  // Featured card
+  featCard:       { marginHorizontal: 16, marginBottom: 16, borderRadius: 24, overflow: 'hidden', backgroundColor: CARD, elevation: 6, shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 16 },
+  featImg:        { width: '100%', height: 220 },
+  featGradient:   { ...StyleSheet.absoluteFillObject, height: 220, background: 'transparent', backgroundColor: 'transparent',
+                    // Simulate gradient with absolute overlay at bottom
+                  },
+  featTopRow:     { position: 'absolute', top: 14, left: 14, right: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  catTag:         { backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
+  catTagTxt:      { color: WHITE, fontSize: 12, fontWeight: '600' },
+  statusTag:      { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1 },
+  statusOpen:     { backgroundColor: 'rgba(0,0,0,0.6)', borderColor: 'rgba(76,175,80,0.3)' },
+  statusClosed:   { backgroundColor: 'rgba(0,0,0,0.6)', borderColor: 'rgba(154,152,255,0.3)' },
+  statusDot:      { width: 6, height: 6, borderRadius: 3 },
+  statusTxt:      { fontSize: 11, fontWeight: '700' },
+  featBottom:     { padding: 16, backgroundColor: CARD },
+  featName:       { color: WHITE, fontSize: 21, fontWeight: '800', letterSpacing: -0.4, marginBottom: 4 },
+  featDesc:       { color: '#555', fontSize: 13, marginBottom: 12 },
+  featMetaRow:    { flexDirection: 'row', gap: 8 },
+  metaChip:       { backgroundColor: '#1a1a1a', borderRadius: 9, paddingHorizontal: 11, paddingVertical: 6, borderWidth: 1, borderColor: BORDER },
+  metaChipTxt:    { color: '#888', fontSize: 12 },
+  metaChipPreorder:    { backgroundColor: '#12123a', borderColor: '#3a3a7a' },
+  metaChipPreorderTxt: { color: '#9a98ff', fontSize: 12, fontWeight: '600' },
+
+  // Compact card
+  compCard:       { flexDirection: 'row', marginHorizontal: 16, marginBottom: 10, borderRadius: 18, overflow: 'hidden', backgroundColor: CARD, borderWidth: 1, borderColor: BORDER },
+  compImgWrap:    { position: 'relative' },
+  compImg:        { width: 96, height: 96 },
+  compImgOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  compBody:       { flex: 1, padding: 12, justifyContent: 'center' },
+  compTopRow:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 },
+  compName:       { color: WHITE, fontSize: 15, fontWeight: '700', flex: 1 },
+  compCatBadge:   { backgroundColor: '#1a1a1a', borderRadius: 8, width: 28, height: 28, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: BORDER },
+  compDesc:       { color: '#444', fontSize: 12, marginBottom: 8 },
+  compMeta:       { flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'wrap' },
+  compMetaTxt:    { color: '#555', fontSize: 11 },
+  compMetaDot:    { color: '#2a2a2a', fontSize: 13 },
+  openDotRow:     { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  dot:            { width: 5, height: 5, borderRadius: 3 },
+
+  // Utils
+  imgDim:         { opacity: 0.45 },
+  emptyBox:       { alignItems: 'center', marginTop: 80, paddingHorizontal: 40 },
+  emptyEmoji:     { fontSize: 52, marginBottom: 16 },
+  emptyTitle:     { color: '#444', fontSize: 17, fontWeight: '600', textAlign: 'center' },
+  emptySub:       { color: '#2a2a2a', fontSize: 13, marginTop: 6, textAlign: 'center' },
 })
+
 

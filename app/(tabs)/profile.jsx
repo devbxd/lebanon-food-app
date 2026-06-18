@@ -1,12 +1,22 @@
-import { useEffect, useState } from 'react'
-import {
-  View, Text, StyleSheet, TouchableOpacity, Alert,
-  Modal, ScrollView, TextInput, ActivityIndicator
-} from 'react-native'
 import { useRouter } from 'expo-router'
-import { supabase } from '../../lib/supabase'
+import { useEffect, useRef, useState } from 'react'
+import {
+  ActivityIndicator,
+  Alert,
+  Animated, Dimensions,
+  Modal, ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native'
 import { useTranslation } from '../../lib/LanguageContext'
 import { LANGUAGES } from '../../lib/i18n'
+import { supabase } from '../../lib/supabase'
+
+const { width } = Dimensions.get('window')
 
 export default function ProfileScreen() {
   const { t, lang, setLang } = useTranslation()
@@ -16,11 +26,12 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true)
   const [langModalVisible, setLangModalVisible] = useState(false)
   const [editModalVisible, setEditModalVisible] = useState(false)
-
-  // Champs édition
   const [editName, setEditName] = useState('')
   const [editEmail, setEditEmail] = useState('')
   const [saving, setSaving] = useState(false)
+
+  const fadeAnim = useRef(new Animated.Value(0)).current
+  const slideAnim = useRef(new Animated.Value(30)).current
 
   useEffect(() => { loadUser() }, [])
 
@@ -31,6 +42,10 @@ export default function ProfileScreen() {
     setEditName(user?.user_metadata?.full_name || '')
     setEditEmail(user?.email || '')
     setLoading(false)
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 500, useNativeDriver: true }),
+    ]).start()
   }
 
   async function saveProfile() {
@@ -60,11 +75,6 @@ export default function ProfileScreen() {
     ])
   }
 
-  async function handleSelectLang(code) {
-    await setLang(code)
-    setLangModalVisible(false)
-  }
-
   const name = user?.user_metadata?.full_name || 'Utilisateur'
   const phone = user?.phone || user?.user_metadata?.phone || ''
   const email = user?.email || ''
@@ -72,128 +82,163 @@ export default function ProfileScreen() {
   const currentLang = LANGUAGES.find(l => l.code === lang) || LANGUAGES[0]
 
   if (loading) return (
-    <View style={styles.loadingBox}>
+    <View style={s.loadingBox}>
       <ActivityIndicator color="#FF6B35" size="large" />
     </View>
   )
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+    <View style={s.container}>
+      <StatusBar barStyle="light-content" />
+      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* Header avatar */}
-        <View style={styles.headerBg}>
-          <View style={styles.avatarRing}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{initials}</Text>
+        {/* ── Hero Header ── */}
+        <Animated.View style={[s.hero, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+          {/* Glow derrière avatar */}
+          <View style={s.avatarGlow} />
+          <View style={s.avatarRing}>
+            <View style={s.avatar}>
+              <Text style={s.avatarText}>{initials}</Text>
             </View>
           </View>
-          <Text style={styles.name}>{name}</Text>
-          {phone ? <Text style={styles.headerSub}>📱 {phone}</Text> : null}
-          {email ? <Text style={styles.headerSub}>✉️ {email}</Text> : null}
 
-          <TouchableOpacity style={styles.editBtn} onPress={() => setEditModalVisible(true)}>
-            <Text style={styles.editBtnTxt}>✏️ Modifier le profil</Text>
+          <Text style={s.heroName}>{name}</Text>
+
+          <View style={s.heroBadges}>
+            {phone ? (
+              <View style={s.badge}>
+                <Text style={s.badgeIcon}>📱</Text>
+                <Text style={s.badgeTxt}>{phone}</Text>
+              </View>
+            ) : null}
+            {email ? (
+              <View style={s.badge}>
+                <Text style={s.badgeIcon}>✉️</Text>
+                <Text style={s.badgeTxt}>{email}</Text>
+              </View>
+            ) : null}
+          </View>
+
+          <TouchableOpacity style={s.editBtn} onPress={() => setEditModalVisible(true)} activeOpacity={0.8}>
+            <Text style={s.editBtnTxt}>✏️  Modifier le profil</Text>
           </TouchableOpacity>
-        </View>
+        </Animated.View>
 
-        {/* Infos */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>MON COMPTE</Text>
-          <View style={styles.card}>
+        {/* ── Stats rapides ── */}
+        <Animated.View style={[s.statsRow, { opacity: fadeAnim }]}>
+          <StatBox emoji="🛍️" label="Commandes" value="—" />
+          <View style={s.statDivider} />
+          <StatBox emoji="❤️" label="Favoris" value="—" />
+          <View style={s.statDivider} />
+          <StatBox emoji="⭐" label="Avis" value="—" />
+        </Animated.View>
+
+        {/* ── Mon compte ── */}
+        <Animated.View style={[s.section, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+          <Text style={s.sectionLabel}>MON COMPTE</Text>
+          <View style={s.card}>
             <InfoRow icon="👤" label="Nom complet" value={name} />
-            <Divider />
+            <View style={s.divider} />
             <InfoRow icon="📱" label="Téléphone" value={phone || '—'} />
-            <Divider />
+            <View style={s.divider} />
             <InfoRow icon="✉️" label="Email" value={email || '—'} />
           </View>
-        </View>
+        </Animated.View>
 
-        {/* Langue */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>PRÉFÉRENCES</Text>
-          <TouchableOpacity style={styles.card} onPress={() => setLangModalVisible(true)}>
-            <View style={styles.rowBetween}>
-              <View style={styles.rowLeft}>
-                <Text style={styles.rowIcon}>🌍</Text>
+        {/* ── Préférences ── */}
+        <Animated.View style={[s.section, { opacity: fadeAnim }]}>
+          <Text style={s.sectionLabel}>PRÉFÉRENCES</Text>
+          <TouchableOpacity style={s.card} onPress={() => setLangModalVisible(true)} activeOpacity={0.75}>
+            <View style={s.rowBetween}>
+              <View style={s.rowLeft}>
+                <View style={s.iconBox}>
+                  <Text style={s.rowIcon}>🌍</Text>
+                </View>
                 <View>
-                  <Text style={styles.rowLabel}>{t('profile.language')}</Text>
-                  <Text style={styles.rowSub}>{t('profile.languageSub')}</Text>
+                  <Text style={s.rowLabel}>{t('profile.language')}</Text>
+                  <Text style={s.rowSub}>{t('profile.languageSub')}</Text>
                 </View>
               </View>
-              <View style={styles.langBadge}>
-                <Text style={styles.langBadgeFlag}>{currentLang.flag}</Text>
-                <Text style={styles.langBadgeTxt}>{currentLang.label}</Text>
-                <Text style={styles.chevron}>›</Text>
+              <View style={s.langPill}>
+                <Text style={s.langPillFlag}>{currentLang.flag}</Text>
+                <Text style={s.langPillTxt}>{currentLang.label}</Text>
+                <Text style={s.chevron}>›</Text>
               </View>
             </View>
           </TouchableOpacity>
-        </View>
+        </Animated.View>
 
-        {/* Déconnexion */}
-        <View style={styles.section}>
-          <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
-            <Text style={styles.logoutText}>🚪 {t('profile.logout')}</Text>
+        {/* ── Déconnexion ── */}
+        <Animated.View style={[s.section, { opacity: fadeAnim }]}>
+          <TouchableOpacity style={s.logoutBtn} onPress={logout} activeOpacity={0.8}>
+            <Text style={s.logoutIcon}>🚪</Text>
+            <Text style={s.logoutTxt}>{t('profile.logout')}</Text>
           </TouchableOpacity>
-        </View>
+        </Animated.View>
 
-        <View style={{ height: 40 }} />
+        <View style={{ height: 50 }} />
       </ScrollView>
 
-      {/* Modal édition profil */}
+      {/* ── Modal édition ── */}
       <Modal visible={editModalVisible} transparent animationType="slide" onRequestClose={() => setEditModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>✏️ Modifier le profil</Text>
+        <View style={s.modalOverlay}>
+          <View style={s.modalSheet}>
+            <View style={s.modalHandle} />
+            <Text style={s.modalTitle}>✏️  Modifier le profil</Text>
 
-            <Text style={styles.inputLabel}>Nom complet</Text>
+            <Text style={s.inputLabel}>Nom complet</Text>
             <TextInput
-              style={styles.input}
+              style={s.input}
               value={editName}
               onChangeText={setEditName}
               placeholder="Ton nom"
-              placeholderTextColor="#555"
+              placeholderTextColor="#444"
             />
 
-            <Text style={styles.inputLabel}>Email</Text>
+            <Text style={s.inputLabel}>Email</Text>
             <TextInput
-              style={styles.input}
+              style={s.input}
               value={editEmail}
               onChangeText={setEditEmail}
               placeholder="ton@email.com"
-              placeholderTextColor="#555"
+              placeholderTextColor="#444"
               keyboardType="email-address"
               autoCapitalize="none"
             />
 
-            <Text style={styles.phoneNote}>📱 Le numéro de téléphone ne peut pas être modifié</Text>
+            <View style={s.phoneNotice}>
+              <Text style={s.phoneNoticeIcon}>🔒</Text>
+              <Text style={s.phoneNoticeTxt}>Le numéro de téléphone ne peut pas être modifié</Text>
+            </View>
 
-            <View style={styles.modalFooter}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setEditModalVisible(false)}>
-                <Text style={styles.cancelBtnTxt}>Annuler</Text>
+            <View style={s.modalFooter}>
+              <TouchableOpacity style={s.cancelBtn} onPress={() => setEditModalVisible(false)}>
+                <Text style={s.cancelTxt}>Annuler</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.saveBtn} onPress={saveProfile} disabled={saving}>
-                <Text style={styles.saveBtnTxt}>{saving ? 'Sauvegarde...' : 'Sauvegarder'}</Text>
+              <TouchableOpacity style={s.saveBtn} onPress={saveProfile} disabled={saving}>
+                <Text style={s.saveTxt}>{saving ? 'Sauvegarde...' : 'Sauvegarder'}</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
 
-      {/* Modal langue */}
+      {/* ── Modal langue ── */}
       <Modal visible={langModalVisible} transparent animationType="fade" onRequestClose={() => setLangModalVisible(false)}>
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setLangModalVisible(false)}>
-          <View style={styles.modalBox} onStartShouldSetResponder={() => true}>
-            <Text style={styles.modalTitle}>{t('language.title')}</Text>
+        <TouchableOpacity style={s.modalOverlay} activeOpacity={1} onPress={() => setLangModalVisible(false)}>
+          <View style={s.modalSheet} onStartShouldSetResponder={() => true}>
+            <View style={s.modalHandle} />
+            <Text style={s.modalTitle}>{t('language.title')}</Text>
             {LANGUAGES.map((l) => (
               <TouchableOpacity
                 key={l.code}
-                style={[styles.langOption, lang === l.code && styles.langOptionActive]}
-                onPress={() => handleSelectLang(l.code)}
+                style={[s.langOption, lang === l.code && s.langOptionActive]}
+                onPress={async () => { await setLang(l.code); setLangModalVisible(false) }}
+                activeOpacity={0.75}
               >
-                <Text style={styles.langOptionFlag}>{l.flag}</Text>
-                <Text style={[styles.langOptionLabel, lang === l.code && styles.langOptionLabelActive]}>{l.label}</Text>
-                {lang === l.code && <View style={styles.modalCheck} />}
+                <Text style={s.langFlag}>{l.flag}</Text>
+                <Text style={[s.langLabel, lang === l.code && s.langLabelActive]}>{l.label}</Text>
+                {lang === l.code && <View style={s.activeDot} />}
               </TouchableOpacity>
             ))}
           </View>
@@ -203,133 +248,213 @@ export default function ProfileScreen() {
   )
 }
 
+function StatBox({ emoji, label, value }) {
+  return (
+    <View style={s.statBox}>
+      <Text style={s.statEmoji}>{emoji}</Text>
+      <Text style={s.statValue}>{value}</Text>
+      <Text style={s.statLabel}>{label}</Text>
+    </View>
+  )
+}
+
 function InfoRow({ icon, label, value }) {
   return (
-    <View style={styles.infoRow}>
-      <Text style={styles.infoIcon}>{icon}</Text>
+    <View style={s.infoRow}>
+      <View style={s.iconBox}>
+        <Text style={s.infoIcon}>{icon}</Text>
+      </View>
       <View style={{ flex: 1 }}>
-        <Text style={styles.infoLabel}>{label}</Text>
-        <Text style={styles.infoValue}>{value}</Text>
+        <Text style={s.infoLabel}>{label}</Text>
+        <Text style={s.infoValue} numberOfLines={1}>{value}</Text>
       </View>
     </View>
   )
 }
 
-function Divider() {
-  return <View style={styles.divider} />
-}
+const ORANGE = '#FF6B35'
+const BG = '#0a0a0a'
+const CARD = '#141414'
+const BORDER = '#1e1e1e'
+const WHITE = '#ffffff'
+const GREY = '#555'
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0d0d0d' },
-  loadingBox: { flex: 1, backgroundColor: '#0d0d0d', justifyContent: 'center', alignItems: 'center' },
-  scroll: { paddingBottom: 30 },
+const s = StyleSheet.create({
+  container:    { flex: 1, backgroundColor: BG },
+  loadingBox:   { flex: 1, backgroundColor: BG, justifyContent: 'center', alignItems: 'center' },
+  scroll:       { paddingBottom: 20 },
 
-  // Header
-  headerBg: {
-    backgroundColor: '#161616',
-    paddingTop: 70, paddingBottom: 28,
+  // Hero
+  hero: {
     alignItems: 'center',
-    borderBottomWidth: 1, borderBottomColor: '#1f1f1f',
-    marginBottom: 8,
+    paddingTop: 70,
+    paddingBottom: 32,
+    paddingHorizontal: 24,
+    backgroundColor: CARD,
+    borderBottomWidth: 1,
+    borderBottomColor: BORDER,
+    marginBottom: 6,
+  },
+  avatarGlow: {
+    position: 'absolute',
+    top: 50,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: ORANGE,
+    opacity: 0.12,
+    transform: [{ scaleX: 2 }],
   },
   avatarRing: {
-    width: 96, height: 96, borderRadius: 48,
-    borderWidth: 2, borderColor: '#FF6B3566',
+    width: 100, height: 100, borderRadius: 50,
+    borderWidth: 2, borderColor: ORANGE + '55',
     justifyContent: 'center', alignItems: 'center',
-    marginBottom: 14,
+    marginBottom: 16,
   },
   avatar: {
-    width: 84, height: 84, borderRadius: 42,
-    backgroundColor: '#FF6B35',
+    width: 86, height: 86, borderRadius: 43,
+    backgroundColor: ORANGE,
     justifyContent: 'center', alignItems: 'center',
   },
-  avatarText: { color: '#fff', fontSize: 32, fontWeight: 'bold' },
-  name: { color: '#fff', fontSize: 22, fontWeight: '700', marginBottom: 6 },
-  headerSub: { color: '#555', fontSize: 13, marginBottom: 2 },
-  editBtn: {
-    marginTop: 14, backgroundColor: '#1f1f1f',
-    borderRadius: 20, paddingHorizontal: 18, paddingVertical: 8,
-    borderWidth: 1, borderColor: '#2a2a2a',
+  avatarText:   { color: WHITE, fontSize: 34, fontWeight: '800' },
+  heroName:     { color: WHITE, fontSize: 24, fontWeight: '700', marginBottom: 10 },
+  heroBadges:   { gap: 6, alignItems: 'center', marginBottom: 18 },
+  badge: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#1a1a1a', borderRadius: 20,
+    paddingHorizontal: 12, paddingVertical: 5,
+    borderWidth: 1, borderColor: BORDER,
   },
-  editBtnTxt: { color: '#FF6B35', fontSize: 13, fontWeight: '600' },
+  badgeIcon:    { fontSize: 12 },
+  badgeTxt:     { color: GREY, fontSize: 12 },
+  editBtn: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 22, paddingHorizontal: 22, paddingVertical: 10,
+    borderWidth: 1, borderColor: ORANGE + '40',
+  },
+  editBtnTxt:   { color: ORANGE, fontSize: 13, fontWeight: '700' },
+
+  // Stats
+  statsRow: {
+    flexDirection: 'row',
+    backgroundColor: CARD,
+    marginHorizontal: 16,
+    marginVertical: 10,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: BORDER,
+    overflow: 'hidden',
+  },
+  statBox:      { flex: 1, alignItems: 'center', paddingVertical: 16 },
+  statEmoji:    { fontSize: 20, marginBottom: 4 },
+  statValue:    { color: WHITE, fontSize: 16, fontWeight: '700' },
+  statLabel:    { color: GREY, fontSize: 11, marginTop: 2 },
+  statDivider:  { width: 1, backgroundColor: BORDER, marginVertical: 12 },
 
   // Sections
-  section: { paddingHorizontal: 20, marginTop: 20 },
-  sectionTitle: {
-    color: '#444', fontSize: 11, fontWeight: '700',
-    letterSpacing: 1.2, marginBottom: 10,
-  },
+  section:      { paddingHorizontal: 16, marginTop: 14 },
+  sectionLabel: { color: '#333', fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 8, paddingLeft: 4 },
 
   card: {
-    backgroundColor: '#161616', borderRadius: 18,
-    borderWidth: 1, borderColor: '#1f1f1f', overflow: 'hidden',
+    backgroundColor: CARD,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: BORDER,
+    overflow: 'hidden',
   },
-  infoRow: { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 12 },
-  infoIcon: { fontSize: 18, width: 24, textAlign: 'center' },
-  infoLabel: { color: '#555', fontSize: 11, marginBottom: 2 },
-  infoValue: { color: '#fff', fontSize: 14, fontWeight: '600' },
-  divider: { height: 1, backgroundColor: '#1f1f1f', marginLeft: 52 },
+  infoRow:      { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
+  iconBox: {
+    width: 36, height: 36, borderRadius: 10,
+    backgroundColor: '#1a1a1a',
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 1, borderColor: BORDER,
+  },
+  infoIcon:     { fontSize: 16 },
+  infoLabel:    { color: '#444', fontSize: 10, marginBottom: 2, fontWeight: '600' },
+  infoValue:    { color: WHITE, fontSize: 14, fontWeight: '600' },
+  divider:      { height: 1, backgroundColor: BORDER, marginLeft: 62 },
 
-  rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 },
-  rowLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  rowIcon: { fontSize: 20, width: 28, textAlign: 'center' },
-  rowLabel: { color: '#fff', fontSize: 14, fontWeight: '600' },
-  rowSub: { color: '#555', fontSize: 12, marginTop: 2 },
-  langBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: '#1f1f1f', borderRadius: 10,
+  rowBetween:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14 },
+  rowLeft:      { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  rowIcon:      { fontSize: 16 },
+  rowLabel:     { color: WHITE, fontSize: 14, fontWeight: '600' },
+  rowSub:       { color: GREY, fontSize: 11, marginTop: 2 },
+  langPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: '#1a1a1a', borderRadius: 12,
     paddingHorizontal: 10, paddingVertical: 6,
-    borderWidth: 1, borderColor: '#2a2a2a',
+    borderWidth: 1, borderColor: BORDER,
   },
-  langBadgeFlag: { fontSize: 15 },
-  langBadgeTxt: { color: '#888', fontSize: 12, fontWeight: '600' },
-  chevron: { color: '#444', fontSize: 18, marginLeft: 2 },
+  langPillFlag: { fontSize: 14 },
+  langPillTxt:  { color: '#888', fontSize: 12, fontWeight: '600' },
+  chevron:      { color: '#333', fontSize: 18 },
 
+  // Logout
   logoutBtn: {
-    backgroundColor: '#161616', borderRadius: 14,
-    padding: 16, alignItems: 'center',
-    borderWidth: 1, borderColor: '#f4433630',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#1a0a0a',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#f4433625',
   },
-  logoutText: { color: '#f44336', fontWeight: '600', fontSize: 15 },
+  logoutIcon:   { fontSize: 18 },
+  logoutTxt:    { color: '#f44336', fontWeight: '700', fontSize: 15 },
 
   // Modals
-  modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.75)',
-    justifyContent: 'flex-end',
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
+  modalSheet: {
+    backgroundColor: '#111',
+    borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    padding: 24, paddingBottom: 44,
+    borderWidth: 1, borderColor: BORDER,
   },
-  modalBox: {
-    backgroundColor: '#161616', borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    padding: 24, paddingBottom: 40,
-    borderWidth: 1, borderColor: '#2a2a2a',
+  modalHandle: {
+    width: 36, height: 4, borderRadius: 2,
+    backgroundColor: '#2a2a2a', alignSelf: 'center', marginBottom: 20,
   },
-  modalTitle: { color: '#fff', fontSize: 17, fontWeight: '700', marginBottom: 20, textAlign: 'center' },
-  inputLabel: { color: '#666', fontSize: 12, marginBottom: 6 },
+  modalTitle:   { color: WHITE, fontSize: 17, fontWeight: '700', marginBottom: 22, textAlign: 'center' },
+  inputLabel:   { color: '#555', fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginBottom: 7 },
   input: {
-    backgroundColor: '#111', borderRadius: 12, padding: 14,
-    color: '#fff', fontSize: 15, borderWidth: 1,
-    borderColor: '#2a2a2a', marginBottom: 14,
+    backgroundColor: '#0d0d0d', borderRadius: 14, padding: 14,
+    color: WHITE, fontSize: 15, borderWidth: 1,
+    borderColor: BORDER, marginBottom: 16,
   },
-  phoneNote: { color: '#444', fontSize: 12, textAlign: 'center', marginTop: 4, marginBottom: 20 },
-  modalFooter: { flexDirection: 'row', gap: 10 },
+  phoneNotice: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#1a1a1a', borderRadius: 12,
+    padding: 12, marginBottom: 22,
+    borderWidth: 1, borderColor: BORDER,
+  },
+  phoneNoticeIcon:  { fontSize: 14 },
+  phoneNoticeTxt:   { color: '#444', fontSize: 12, flex: 1 },
+  modalFooter:  { flexDirection: 'row', gap: 10 },
   cancelBtn: {
-    flex: 1, padding: 14, borderRadius: 12,
-    borderWidth: 1, borderColor: '#2a2a2a', alignItems: 'center',
+    flex: 1, padding: 14, borderRadius: 14,
+    borderWidth: 1, borderColor: BORDER, alignItems: 'center',
   },
-  cancelBtnTxt: { color: '#666', fontWeight: '600' },
+  cancelTxt:    { color: GREY, fontWeight: '600', fontSize: 14 },
   saveBtn: {
-    flex: 2, padding: 14, borderRadius: 12,
-    backgroundColor: '#FF6B35', alignItems: 'center',
+    flex: 2, padding: 14, borderRadius: 14,
+    backgroundColor: ORANGE, alignItems: 'center',
+    shadowColor: ORANGE, shadowOpacity: 0.3, shadowRadius: 10, elevation: 6,
   },
-  saveBtnTxt: { color: '#fff', fontWeight: '700', fontSize: 15 },
+  saveTxt:      { color: WHITE, fontWeight: '700', fontSize: 15 },
 
+  // Lang options
   langOption: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: '#111', borderRadius: 12, padding: 14,
-    marginBottom: 8, borderWidth: 1, borderColor: '#2a2a2a',
+    backgroundColor: '#0d0d0d', borderRadius: 14, padding: 14,
+    marginBottom: 8, borderWidth: 1, borderColor: BORDER,
   },
-  langOptionActive: { borderColor: '#FF6B35', backgroundColor: '#2a1a10' },
-  langOptionFlag: { fontSize: 22 },
-  langOptionLabel: { color: '#888', fontSize: 15, fontWeight: '600', flex: 1 },
-  langOptionLabelActive: { color: '#fff' },
-  modalCheck: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF6B35' },
+  langOptionActive: { borderColor: ORANGE, backgroundColor: '#1a0d07' },
+  langFlag:     { fontSize: 22 },
+  langLabel:    { color: '#777', fontSize: 15, fontWeight: '600', flex: 1 },
+  langLabelActive: { color: WHITE },
+  activeDot:    { width: 8, height: 8, borderRadius: 4, backgroundColor: ORANGE },
 })
+
+
