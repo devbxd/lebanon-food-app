@@ -3,35 +3,62 @@ import { useEffect, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
-  Animated, Dimensions,
-  Modal, ScrollView,
+  Animated,
+  Modal,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
+  Platform,
 } from 'react-native'
+import * as ImagePicker from 'expo-image-picker'
+import { Image } from 'expo-image'
 import { useTranslation } from '../../lib/LanguageContext'
 import { LANGUAGES } from '../../lib/i18n'
 import { supabase } from '../../lib/supabase'
 
-const { width } = Dimensions.get('window')
+// ─── Constants ────────────────────────────────────────────────────────────────
+const ORANGE  = '#FF6B35'
+const BG      = '#080808'
+const CARD    = '#111111'
+const CARD2   = '#161616'
+const BORDER  = '#1f1f1f'
+const WHITE   = '#ffffff'
+const MUTED   = '#888'
+const DIM     = '#444'
 
+// ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function ProfileScreen() {
   const { t, lang, setLang } = useTranslation()
   const router = useRouter()
 
-  const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [langModalVisible, setLangModalVisible] = useState(false)
-  const [editModalVisible, setEditModalVisible] = useState(false)
-  const [editName, setEditName] = useState('')
-  const [editEmail, setEditEmail] = useState('')
-  const [saving, setSaving] = useState(false)
+  const [user,             setUser]             = useState(null)
+  const [loading,          setLoading]          = useState(true)
+  const [avatarUri,        setAvatarUri]        = useState(null)
+  const [uploadingAvatar,  setUploadingAvatar]  = useState(false)
+  const [langModal,        setLangModal]        = useState(false)
+  const [editModal,        setEditModal]        = useState(false)
+  const [editName,         setEditName]         = useState('')
+  const [saving,           setSaving]           = useState(false)
 
-  const fadeAnim = useRef(new Animated.Value(0)).current
-  const slideAnim = useRef(new Animated.Value(30)).current
+  const fadeAnim  = useRef(new Animated.Value(0)).current
+  const scaleAnim = useRef(new Animated.Value(0.94)).current
+  const pulseAnim = useRef(new Animated.Value(1)).current
+
+  // Pulse glow loop
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.18, duration: 2000, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1.00, duration: 2000, useNativeDriver: true }),
+      ])
+    )
+    loop.start()
+    return () => loop.stop()
+  }, [])
 
   useEffect(() => { loadUser() }, [])
 
@@ -40,29 +67,92 @@ export default function ProfileScreen() {
     const { data: { user } } = await supabase.auth.getUser()
     setUser(user)
     setEditName(user?.user_metadata?.full_name || '')
-    setEditEmail(user?.email || '')
+
+    // Load stored avatar from Supabase Storage
+    if (user?.id) {
+      const { data } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(`${user.id}/avatar.jpg`)
+      if (data?.publicUrl) {
+        // Bust cache on reload
+        setAvatarUri(`${data.publicUrl}?t=${Date.now()}`)
+      }
+    }
+
     setLoading(false)
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 500, useNativeDriver: true }),
+      Animated.timing(fadeAnim,  { toValue: 1,    duration: 520, useNativeDriver: true }),
+      Animated.timing(scaleAnim, { toValue: 1,    duration: 520, useNativeDriver: true }),
     ]).start()
   }
 
+  // ── Avatar picker ──────────────────────────────────────────────────────────
+  async function pickAvatar() {
+    // Ask permission
+    if (Platform.OS !== 'web') {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+      if (status !== 'granted') {
+        Alert.alert('Permission requise', 'Active l\'accès à ta galerie dans les réglages.')
+        return
+      }
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.75,
+    })
+
+    if (result.canceled) return
+
+    const uri = result.assets[0].uri
+    await uploadAvatar(uri)
+  }
+
+  async function uploadAvatar(uri) {
+    if (!user?.id) return
+    setUploadingAvatar(true)
+
+    try {
+      // Fetch blob from local URI
+      const response = await fetch(uri)
+      const blob     = await response.blob()
+
+      const filePath = `${user.id}/avatar.jpg`
+      const { error } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, blob, {
+          contentType: 'image/jpeg',
+          upsert: true,
+        })
+
+      if (error) throw error
+
+      // Refresh displayed avatar
+      const { data } = supabase.storage.from('avatars').getPublicUrl(filePath)
+      setAvatarUri(`${data.publicUrl}?t=${Date.now()}`)
+    } catch (err) {
+      Alert.alert('Erreur', err.message || 'Impossible d\'enregistrer la photo.')
+    } finally {
+      setUploadingAvatar(false)
+    }
+  }
+
+  // ── Save profile ───────────────────────────────────────────────────────────
   async function saveProfile() {
     setSaving(true)
-    const updates = { data: { full_name: editName } }
-    if (editEmail && editEmail !== user?.email) updates.email = editEmail
-    const { error } = await supabase.auth.updateUser(updates)
+    const { error } = await supabase.auth.updateUser({ data: { full_name: editName } })
     setSaving(false)
     if (error) {
       Alert.alert('Erreur', error.message)
     } else {
       await loadUser()
-      setEditModalVisible(false)
-      Alert.alert('✅ Profil mis à jour')
+      setEditModal(false)
     }
   }
 
+  // ── Logout ─────────────────────────────────────────────────────────────────
   async function logout() {
     Alert.alert(t('profile.logoutConfirmTitle'), t('profile.logoutConfirmMsg'), [
       { text: t('profile.cancel'), style: 'cancel' },
@@ -75,15 +165,15 @@ export default function ProfileScreen() {
     ])
   }
 
-  const name = user?.user_metadata?.full_name || 'Utilisateur'
-  const phone = user?.phone || user?.user_metadata?.phone || ''
-  const email = user?.email || ''
-  const initials = name.split(' ').map(n => n[0]).filter(Boolean).join('').toUpperCase().slice(0, 2) || '?'
+  // ── Derived ────────────────────────────────────────────────────────────────
+  const name        = user?.user_metadata?.full_name || 'Utilisateur'
+  const phone       = user?.phone || user?.user_metadata?.phone || ''
+  const initials    = name.split(' ').map(n => n[0]).filter(Boolean).join('').toUpperCase().slice(0, 2) || '?'
   const currentLang = LANGUAGES.find(l => l.code === lang) || LANGUAGES[0]
 
   if (loading) return (
     <View style={s.loadingBox}>
-      <ActivityIndicator color="#FF6B35" size="large" />
+      <ActivityIndicator color={ORANGE} size="large" />
     </View>
   )
 
@@ -92,80 +182,78 @@ export default function ProfileScreen() {
       <StatusBar barStyle="light-content" />
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* ── Hero Header ── */}
-        <Animated.View style={[s.hero, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-          {/* Glow derrière avatar */}
-          <View style={s.avatarGlow} />
-          <View style={s.avatarRing}>
-            <View style={s.avatar}>
-              <Text style={s.avatarText}>{initials}</Text>
+        {/* ── Hero ── */}
+        <Animated.View style={[s.hero, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
+
+          {/* Radial glow (pulsing) */}
+          <Animated.View style={[s.glowCircle, { transform: [{ scale: pulseAnim }] }]} />
+
+          {/* Avatar tap zone */}
+          <TouchableOpacity onPress={pickAvatar} activeOpacity={0.85} style={s.avatarWrap}>
+            <View style={s.avatarRing}>
+              {avatarUri ? (
+                <Image
+                  source={{ uri: avatarUri }}
+                  style={s.avatarImg}
+                  contentFit="cover"
+                  transition={300}
+                />
+              ) : (
+                <View style={s.avatarFallback}>
+                  <Text style={s.avatarInitials}>{initials}</Text>
+                </View>
+              )}
+
+              {/* Camera overlay */}
+              <View style={s.cameraOverlay}>
+                {uploadingAvatar
+                  ? <ActivityIndicator color={WHITE} size="small" />
+                  : <Text style={s.cameraIcon}>📷</Text>
+                }
+              </View>
             </View>
-          </View>
+          </TouchableOpacity>
 
           <Text style={s.heroName}>{name}</Text>
+          {phone ? <Text style={s.heroPhone}>{phone}</Text> : null}
 
-          <View style={s.heroBadges}>
-            {phone ? (
-              <View style={s.badge}>
-                <Text style={s.badgeIcon}>📱</Text>
-                <Text style={s.badgeTxt}>{phone}</Text>
-              </View>
-            ) : null}
-            {email ? (
-              <View style={s.badge}>
-                <Text style={s.badgeIcon}>✉️</Text>
-                <Text style={s.badgeTxt}>{email}</Text>
-              </View>
-            ) : null}
-          </View>
-
-          <TouchableOpacity style={s.editBtn} onPress={() => setEditModalVisible(true)} activeOpacity={0.8}>
-            <Text style={s.editBtnTxt}>✏️  Modifier le profil</Text>
+          <TouchableOpacity style={s.editBtn} onPress={() => setEditModal(true)} activeOpacity={0.8}>
+            <Text style={s.editBtnTxt}>Modifier le profil</Text>
           </TouchableOpacity>
         </Animated.View>
 
-        {/* ── Stats rapides ── */}
+        {/* ── Stats ── */}
         <Animated.View style={[s.statsRow, { opacity: fadeAnim }]}>
           <StatBox emoji="🛍️" label="Commandes" value="—" />
           <View style={s.statDivider} />
-          <StatBox emoji="❤️" label="Favoris" value="—" />
+          <StatBox emoji="❤️" label="Favoris"   value="—" />
           <View style={s.statDivider} />
-          <StatBox emoji="⭐" label="Avis" value="—" />
-        </Animated.View>
-
-        {/* ── Mon compte ── */}
-        <Animated.View style={[s.section, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-          <Text style={s.sectionLabel}>MON COMPTE</Text>
-          <View style={s.card}>
-            <InfoRow icon="👤" label="Nom complet" value={name} />
-            <View style={s.divider} />
-            <InfoRow icon="📱" label="Téléphone" value={phone || '—'} />
-            <View style={s.divider} />
-            <InfoRow icon="✉️" label="Email" value={email || '—'} />
-          </View>
+          <StatBox emoji="⭐" label="Avis"       value="—" />
         </Animated.View>
 
         {/* ── Préférences ── */}
         <Animated.View style={[s.section, { opacity: fadeAnim }]}>
           <Text style={s.sectionLabel}>PRÉFÉRENCES</Text>
-          <TouchableOpacity style={s.card} onPress={() => setLangModalVisible(true)} activeOpacity={0.75}>
-            <View style={s.rowBetween}>
-              <View style={s.rowLeft}>
-                <View style={s.iconBox}>
-                  <Text style={s.rowIcon}>🌍</Text>
+          <View style={s.card}>
+            <TouchableOpacity onPress={() => setLangModal(true)} activeOpacity={0.75}>
+              <View style={s.menuRow}>
+                <View style={s.menuLeft}>
+                  <View style={s.menuIcon}><Text style={s.menuIconEmoji}>🌍</Text></View>
+                  <View>
+                    <Text style={s.menuTitle}>{t('profile.language')}</Text>
+                    <Text style={s.menuSub}>{t('profile.languageSub')}</Text>
+                  </View>
                 </View>
-                <View>
-                  <Text style={s.rowLabel}>{t('profile.language')}</Text>
-                  <Text style={s.rowSub}>{t('profile.languageSub')}</Text>
+                <View style={s.langPill}>
+                  <Text style={s.langPillFlag}>{currentLang.flag}</Text>
+                  <Text style={s.langPillTxt}>{currentLang.label}</Text>
+                  <Text style={s.chevron}>›</Text>
                 </View>
               </View>
-              <View style={s.langPill}>
-                <Text style={s.langPillFlag}>{currentLang.flag}</Text>
-                <Text style={s.langPillTxt}>{currentLang.label}</Text>
-                <Text style={s.chevron}>›</Text>
-              </View>
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
+
+
+          </View>
         </Animated.View>
 
         {/* ── Déconnexion ── */}
@@ -176,15 +264,30 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </Animated.View>
 
-        <View style={{ height: 50 }} />
+        <View style={{ height: 60 }} />
       </ScrollView>
 
       {/* ── Modal édition ── */}
-      <Modal visible={editModalVisible} transparent animationType="slide" onRequestClose={() => setEditModalVisible(false)}>
-        <View style={s.modalOverlay}>
-          <View style={s.modalSheet}>
-            <View style={s.modalHandle} />
-            <Text style={s.modalTitle}>✏️  Modifier le profil</Text>
+      <Modal visible={editModal} transparent animationType="slide" onRequestClose={() => setEditModal(false)}>
+        <View style={s.overlay}>
+          <View style={s.sheet}>
+            <View style={s.handle} />
+            <Text style={s.sheetTitle}>Modifier le profil</Text>
+
+            {/* Avatar in modal */}
+            <TouchableOpacity onPress={pickAvatar} activeOpacity={0.85} style={s.modalAvatarWrap}>
+              {avatarUri ? (
+                <Image source={{ uri: avatarUri }} style={s.modalAvatarImg} contentFit="cover" transition={200} />
+              ) : (
+                <View style={s.modalAvatarFallback}>
+                  <Text style={s.modalAvatarInitials}>{initials}</Text>
+                </View>
+              )}
+              <View style={s.modalCameraTag}>
+                <Text style={{ fontSize: 11 }}>📷</Text>
+                <Text style={s.modalCameraTagTxt}>Changer</Text>
+              </View>
+            </TouchableOpacity>
 
             <Text style={s.inputLabel}>Nom complet</Text>
             <TextInput
@@ -192,31 +295,20 @@ export default function ProfileScreen() {
               value={editName}
               onChangeText={setEditName}
               placeholder="Ton nom"
-              placeholderTextColor="#444"
-            />
-
-            <Text style={s.inputLabel}>Email</Text>
-            <TextInput
-              style={s.input}
-              value={editEmail}
-              onChangeText={setEditEmail}
-              placeholder="ton@email.com"
-              placeholderTextColor="#444"
-              keyboardType="email-address"
-              autoCapitalize="none"
+              placeholderTextColor={DIM}
             />
 
             <View style={s.phoneNotice}>
-              <Text style={s.phoneNoticeIcon}>🔒</Text>
-              <Text style={s.phoneNoticeTxt}>Le numéro de téléphone ne peut pas être modifié</Text>
+              <Text style={{ fontSize: 14 }}>🔒</Text>
+              <Text style={s.phoneNoticeTxt}>Numéro de téléphone non modifiable</Text>
             </View>
 
-            <View style={s.modalFooter}>
-              <TouchableOpacity style={s.cancelBtn} onPress={() => setEditModalVisible(false)}>
+            <View style={s.sheetFooter}>
+              <TouchableOpacity style={s.cancelBtn} onPress={() => setEditModal(false)}>
                 <Text style={s.cancelTxt}>Annuler</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.saveBtn} onPress={saveProfile} disabled={saving}>
-                <Text style={s.saveTxt}>{saving ? 'Sauvegarde...' : 'Sauvegarder'}</Text>
+                <Text style={s.saveTxt}>{saving ? '...' : 'Sauvegarder'}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -224,20 +316,20 @@ export default function ProfileScreen() {
       </Modal>
 
       {/* ── Modal langue ── */}
-      <Modal visible={langModalVisible} transparent animationType="fade" onRequestClose={() => setLangModalVisible(false)}>
-        <TouchableOpacity style={s.modalOverlay} activeOpacity={1} onPress={() => setLangModalVisible(false)}>
-          <View style={s.modalSheet} onStartShouldSetResponder={() => true}>
-            <View style={s.modalHandle} />
-            <Text style={s.modalTitle}>{t('language.title')}</Text>
-            {LANGUAGES.map((l) => (
+      <Modal visible={langModal} transparent animationType="fade" onRequestClose={() => setLangModal(false)}>
+        <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={() => setLangModal(false)}>
+          <View style={s.sheet} onStartShouldSetResponder={() => true}>
+            <View style={s.handle} />
+            <Text style={s.sheetTitle}>{t('language.title')}</Text>
+            {LANGUAGES.map(l => (
               <TouchableOpacity
                 key={l.code}
                 style={[s.langOption, lang === l.code && s.langOptionActive]}
-                onPress={async () => { await setLang(l.code); setLangModalVisible(false) }}
+                onPress={async () => { await setLang(l.code); setLangModal(false) }}
                 activeOpacity={0.75}
               >
                 <Text style={s.langFlag}>{l.flag}</Text>
-                <Text style={[s.langLabel, lang === l.code && s.langLabelActive]}>{l.label}</Text>
+                <Text style={[s.langLabel, lang === l.code && { color: WHITE }]}>{l.label}</Text>
                 {lang === l.code && <View style={s.activeDot} />}
               </TouchableOpacity>
             ))}
@@ -248,6 +340,7 @@ export default function ProfileScreen() {
   )
 }
 
+// ─── Sub-components ────────────────────────────────────────────────────────────
 function StatBox({ emoji, label, value }) {
   return (
     <View style={s.statBox}>
@@ -258,127 +351,119 @@ function StatBox({ emoji, label, value }) {
   )
 }
 
-function InfoRow({ icon, label, value }) {
-  return (
-    <View style={s.infoRow}>
-      <View style={s.iconBox}>
-        <Text style={s.infoIcon}>{icon}</Text>
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text style={s.infoLabel}>{label}</Text>
-        <Text style={s.infoValue} numberOfLines={1}>{value}</Text>
-      </View>
-    </View>
-  )
-}
-
-const ORANGE = '#FF6B35'
-const BG = '#0a0a0a'
-const CARD = '#141414'
-const BORDER = '#1e1e1e'
-const WHITE = '#ffffff'
-const GREY = '#555'
-
+// ─── Styles ────────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  container:    { flex: 1, backgroundColor: BG },
-  loadingBox:   { flex: 1, backgroundColor: BG, justifyContent: 'center', alignItems: 'center' },
-  scroll:       { paddingBottom: 20 },
+  container:  { flex: 1, backgroundColor: BG },
+  loadingBox: { flex: 1, backgroundColor: BG, justifyContent: 'center', alignItems: 'center' },
+  scroll:     { paddingBottom: 20 },
 
   // Hero
   hero: {
     alignItems: 'center',
-    paddingTop: 70,
-    paddingBottom: 32,
-    paddingHorizontal: 24,
+    paddingTop: 80,
+    paddingBottom: 36,
     backgroundColor: CARD,
     borderBottomWidth: 1,
     borderBottomColor: BORDER,
-    marginBottom: 6,
+    overflow: 'hidden',
   },
-  avatarGlow: {
+  glowCircle: {
     position: 'absolute',
-    top: 50,
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    top: 10,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
     backgroundColor: ORANGE,
-    opacity: 0.12,
-    transform: [{ scaleX: 2 }],
+    opacity: 0.07,
   },
+
+  // Avatar
+  avatarWrap:   { marginBottom: 18 },
   avatarRing: {
-    width: 100, height: 100, borderRadius: 50,
-    borderWidth: 2, borderColor: ORANGE + '55',
+    width: 104, height: 104, borderRadius: 52,
+    borderWidth: 2, borderColor: ORANGE + '60',
     justifyContent: 'center', alignItems: 'center',
-    marginBottom: 16,
+    position: 'relative',
   },
-  avatar: {
-    width: 86, height: 86, borderRadius: 43,
+  avatarImg:      { width: 92, height: 92, borderRadius: 46 },
+  avatarFallback: {
+    width: 92, height: 92, borderRadius: 46,
     backgroundColor: ORANGE,
     justifyContent: 'center', alignItems: 'center',
   },
-  avatarText:   { color: WHITE, fontSize: 34, fontWeight: '800' },
-  heroName:     { color: WHITE, fontSize: 24, fontWeight: '700', marginBottom: 10 },
-  heroBadges:   { gap: 6, alignItems: 'center', marginBottom: 18 },
-  badge: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: '#1a1a1a', borderRadius: 20,
-    paddingHorizontal: 12, paddingVertical: 5,
-    borderWidth: 1, borderColor: BORDER,
+  avatarInitials: { color: WHITE, fontSize: 34, fontWeight: '800' },
+  cameraOverlay: {
+    position: 'absolute',
+    bottom: 0, right: 0,
+    width: 30, height: 30, borderRadius: 15,
+    backgroundColor: '#222',
+    borderWidth: 2, borderColor: BG,
+    justifyContent: 'center', alignItems: 'center',
   },
-  badgeIcon:    { fontSize: 12 },
-  badgeTxt:     { color: GREY, fontSize: 12 },
+  cameraIcon: { fontSize: 13 },
+
+  heroName:  { color: WHITE, fontSize: 22, fontWeight: '700', marginBottom: 4 },
+  heroPhone: { color: MUTED, fontSize: 13, marginBottom: 18 },
+
   editBtn: {
-    backgroundColor: '#1a1a1a',
-    borderRadius: 22, paddingHorizontal: 22, paddingVertical: 10,
-    borderWidth: 1, borderColor: ORANGE + '40',
+    backgroundColor: 'transparent',
+    borderRadius: 22, paddingHorizontal: 22, paddingVertical: 9,
+    borderWidth: 1, borderColor: ORANGE + '50',
   },
-  editBtnTxt:   { color: ORANGE, fontSize: 13, fontWeight: '700' },
+  editBtnTxt: { color: ORANGE, fontSize: 13, fontWeight: '700' },
 
   // Stats
   statsRow: {
     flexDirection: 'row',
-    backgroundColor: CARD,
+    backgroundColor: CARD2,
     marginHorizontal: 16,
-    marginVertical: 10,
-    borderRadius: 18,
+    marginTop: 12,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: BORDER,
     overflow: 'hidden',
   },
-  statBox:      { flex: 1, alignItems: 'center', paddingVertical: 16 },
-  statEmoji:    { fontSize: 20, marginBottom: 4 },
-  statValue:    { color: WHITE, fontSize: 16, fontWeight: '700' },
-  statLabel:    { color: GREY, fontSize: 11, marginTop: 2 },
-  statDivider:  { width: 1, backgroundColor: BORDER, marginVertical: 12 },
+  statBox:     { flex: 1, alignItems: 'center', paddingVertical: 16 },
+  statEmoji:   { fontSize: 20, marginBottom: 5 },
+  statValue:   { color: WHITE, fontSize: 16, fontWeight: '700' },
+  statLabel:   { color: DIM, fontSize: 11, marginTop: 2 },
+  statDivider: { width: 1, backgroundColor: BORDER, marginVertical: 14 },
 
   // Sections
-  section:      { paddingHorizontal: 16, marginTop: 14 },
-  sectionLabel: { color: '#333', fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 8, paddingLeft: 4 },
-
+  section:      { paddingHorizontal: 16, marginTop: 16 },
+  sectionLabel: {
+    color: '#2e2e2e',
+    fontSize: 10, fontWeight: '800',
+    letterSpacing: 2,
+    marginBottom: 8, paddingLeft: 4,
+  },
   card: {
-    backgroundColor: CARD,
+    backgroundColor: CARD2,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: BORDER,
     overflow: 'hidden',
   },
-  infoRow:      { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
-  iconBox: {
+
+  // Menu rows
+  menuRow: {
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 14, gap: 12,
+  },
+  menuLeft:  { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  menuIcon: {
     width: 36, height: 36, borderRadius: 10,
     backgroundColor: '#1a1a1a',
     justifyContent: 'center', alignItems: 'center',
     borderWidth: 1, borderColor: BORDER,
   },
-  infoIcon:     { fontSize: 16 },
-  infoLabel:    { color: '#444', fontSize: 10, marginBottom: 2, fontWeight: '600' },
-  infoValue:    { color: WHITE, fontSize: 14, fontWeight: '600' },
-  divider:      { height: 1, backgroundColor: BORDER, marginLeft: 62 },
+  menuIconEmoji: { fontSize: 15 },
+  menuTitle: { color: WHITE, fontSize: 14, fontWeight: '600' },
+  menuSub:   { color: DIM, fontSize: 11, marginTop: 2 },
+  chevron:   { color: '#2e2e2e', fontSize: 20, fontWeight: '300' },
+  divider:   { height: 1, backgroundColor: BORDER, marginLeft: 62 },
 
-  rowBetween:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14 },
-  rowLeft:      { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  rowIcon:      { fontSize: 16 },
-  rowLabel:     { color: WHITE, fontSize: 14, fontWeight: '600' },
-  rowSub:       { color: GREY, fontSize: 11, marginTop: 2 },
   langPill: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     backgroundColor: '#1a1a1a', borderRadius: 12,
@@ -386,63 +471,77 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: BORDER,
   },
   langPillFlag: { fontSize: 14 },
-  langPillTxt:  { color: '#888', fontSize: 12, fontWeight: '600' },
-  chevron:      { color: '#333', fontSize: 18 },
+  langPillTxt:  { color: MUTED, fontSize: 12, fontWeight: '600' },
 
   // Logout
   logoutBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#1a0a0a',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#f4433625',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: '#120505',
+    borderRadius: 16, padding: 16,
+    borderWidth: 1, borderColor: '#f4433618',
   },
-  logoutIcon:   { fontSize: 18 },
-  logoutTxt:    { color: '#f44336', fontWeight: '700', fontSize: 15 },
+  logoutIcon: { fontSize: 16 },
+  logoutTxt:  { color: '#f44336', fontWeight: '700', fontSize: 15 },
 
   // Modals
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
-  modalSheet: {
-    backgroundColor: '#111',
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'flex-end' },
+  sheet: {
+    backgroundColor: '#0e0e0e',
     borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    padding: 24, paddingBottom: 44,
+    padding: 24, paddingBottom: 48,
     borderWidth: 1, borderColor: BORDER,
   },
-  modalHandle: {
+  handle: {
     width: 36, height: 4, borderRadius: 2,
-    backgroundColor: '#2a2a2a', alignSelf: 'center', marginBottom: 20,
+    backgroundColor: '#222', alignSelf: 'center', marginBottom: 22,
   },
-  modalTitle:   { color: WHITE, fontSize: 17, fontWeight: '700', marginBottom: 22, textAlign: 'center' },
-  inputLabel:   { color: '#555', fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginBottom: 7 },
+  sheetTitle: { color: WHITE, fontSize: 17, fontWeight: '700', marginBottom: 22, textAlign: 'center' },
+
+  // Avatar in edit modal
+  modalAvatarWrap: { alignSelf: 'center', marginBottom: 24 },
+  modalAvatarImg:  { width: 80, height: 80, borderRadius: 40 },
+  modalAvatarFallback: {
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: ORANGE,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  modalAvatarInitials: { color: WHITE, fontSize: 28, fontWeight: '800' },
+  modalCameraTag: {
+    position: 'absolute', bottom: -2, alignSelf: 'center',
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: '#222', borderRadius: 10,
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderWidth: 1, borderColor: BORDER,
+    left: '50%', transform: [{ translateX: -34 }],
+  },
+  modalCameraTagTxt: { color: MUTED, fontSize: 11, fontWeight: '600' },
+
+  inputLabel: { color: DIM, fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginBottom: 7 },
   input: {
-    backgroundColor: '#0d0d0d', borderRadius: 14, padding: 14,
+    backgroundColor: '#0a0a0a', borderRadius: 14, padding: 14,
     color: WHITE, fontSize: 15, borderWidth: 1,
     borderColor: BORDER, marginBottom: 16,
   },
   phoneNotice: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: '#1a1a1a', borderRadius: 12,
-    padding: 12, marginBottom: 22,
+    padding: 12, marginBottom: 24,
     borderWidth: 1, borderColor: BORDER,
   },
-  phoneNoticeIcon:  { fontSize: 14 },
-  phoneNoticeTxt:   { color: '#444', fontSize: 12, flex: 1 },
-  modalFooter:  { flexDirection: 'row', gap: 10 },
+  phoneNoticeTxt: { color: DIM, fontSize: 12, flex: 1 },
+
+  sheetFooter: { flexDirection: 'row', gap: 10 },
   cancelBtn: {
     flex: 1, padding: 14, borderRadius: 14,
     borderWidth: 1, borderColor: BORDER, alignItems: 'center',
   },
-  cancelTxt:    { color: GREY, fontWeight: '600', fontSize: 14 },
+  cancelTxt: { color: MUTED, fontWeight: '600', fontSize: 14 },
   saveBtn: {
     flex: 2, padding: 14, borderRadius: 14,
     backgroundColor: ORANGE, alignItems: 'center',
-    shadowColor: ORANGE, shadowOpacity: 0.3, shadowRadius: 10, elevation: 6,
+    shadowColor: ORANGE, shadowOpacity: 0.25, shadowRadius: 12, elevation: 6,
   },
-  saveTxt:      { color: WHITE, fontWeight: '700', fontSize: 15 },
+  saveTxt: { color: WHITE, fontWeight: '700', fontSize: 15 },
 
   // Lang options
   langOption: {
@@ -450,11 +549,8 @@ const s = StyleSheet.create({
     backgroundColor: '#0d0d0d', borderRadius: 14, padding: 14,
     marginBottom: 8, borderWidth: 1, borderColor: BORDER,
   },
-  langOptionActive: { borderColor: ORANGE, backgroundColor: '#1a0d07' },
-  langFlag:     { fontSize: 22 },
-  langLabel:    { color: '#777', fontSize: 15, fontWeight: '600', flex: 1 },
-  langLabelActive: { color: WHITE },
-  activeDot:    { width: 8, height: 8, borderRadius: 4, backgroundColor: ORANGE },
+  langOptionActive: { borderColor: ORANGE, backgroundColor: '#140a04' },
+  langFlag:  { fontSize: 22 },
+  langLabel: { color: '#666', fontSize: 15, fontWeight: '600', flex: 1 },
+  activeDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: ORANGE },
 })
-
-

@@ -38,7 +38,7 @@ export default function ConfirmationScreen() {
   const steps = preorder
     ? [
         { dot: '#9a98ff', title: '✅  Précommande reçue', sub: 'Ta commande est enregistrée dans le système' },
-    { dot: '#4CAF50', title: `🔓  À l'ouverture`, sub: `Ta commande apparaît sur le dashboard du restaurant` },
+        { dot: '#4CAF50', title: `🔓  À l'ouverture`, sub: `Ta commande apparaît sur le dashboard du restaurant` },
         { dot: '#2196F3', title: '👨‍🍳  Préparation', sub: 'Le restaurant accepte et commence à préparer' },
         { dot: ORANGE,    title: '🛵  Livraison', sub: 'Un livreur prend en charge ta commande' },
       ]
@@ -56,7 +56,6 @@ export default function ConfirmationScreen() {
 
         {/* ── Hero ── */}
         <View style={s.hero}>
-          {/* Glow */}
           <View style={[s.glow, { backgroundColor: accentColor }]} />
 
           <Animated.View style={[s.circleOuter, { borderColor: accentColor + '40', transform: [{ scale: scaleAnim }] }]}>
@@ -116,13 +115,17 @@ export default function ConfirmationScreen() {
             {latestOrderId && !preorder && (
               <TouchableOpacity
                 style={s.trackBtn}
-                onPress={() => router.push({ pathname: '/tracking', params: { orderId: latestOrderId } })}
+                onPress={() => router.replace({ pathname: '/tracking', params: { orderId: latestOrderId } })}
                 activeOpacity={0.85}
               >
                 <Text style={s.trackBtnTxt}>{t('confirmation.trackBtn')}</Text>
               </TouchableOpacity>
             )}
-            <TouchableOpacity style={s.homeBtn} onPress={() => router.push('/')} activeOpacity={0.8}>
+            <TouchableOpacity
+              style={s.homeBtn}
+              onPress={() => router.replace('/(tabs)')}
+              activeOpacity={0.8}
+            >
               <Text style={s.homeBtnTxt}>{t('confirmation.homeBtn')}</Text>
             </TouchableOpacity>
           </View>
@@ -136,10 +139,9 @@ export default function ConfirmationScreen() {
 }
 
 const s = StyleSheet.create({
-  container:    { flex: 1, backgroundColor: BG },
-  scroll:       { padding: 20, paddingTop: 0 },
+  container: { flex: 1, backgroundColor: BG },
+  scroll:    { padding: 20, paddingTop: 0 },
 
-  // Hero
   hero: {
     alignItems: 'center',
     paddingTop: 80, paddingBottom: 36,
@@ -160,47 +162,43 @@ const s = StyleSheet.create({
     width: 100, height: 100, borderRadius: 50,
     justifyContent: 'center', alignItems: 'center',
   },
-  heroEmoji:    { fontSize: 46 },
-  heroTitle:    { color: WHITE, fontSize: 26, fontWeight: '800', textAlign: 'center', marginBottom: 10, letterSpacing: -0.5 },
-  heroSub:      { color: '#444', fontSize: 14, textAlign: 'center', lineHeight: 22, paddingHorizontal: 20 },
+  heroEmoji:  { fontSize: 46 },
+  heroTitle:  { color: WHITE, fontSize: 26, fontWeight: '800', textAlign: 'center', marginBottom: 10, letterSpacing: -0.5 },
+  heroSub:    { color: '#444', fontSize: 14, textAlign: 'center', lineHeight: 22, paddingHorizontal: 20 },
 
-  // Notice
   noticeBanner: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 12,
     backgroundColor: '#0e0e2a', borderRadius: 18,
     padding: 16, marginBottom: 16,
     borderWidth: 1, borderColor: '#2a2a6a',
   },
-  noticeIcon:   { fontSize: 22 },
-  noticeTitle:  { color: '#9a98ff', fontWeight: '700', fontSize: 14, marginBottom: 4 },
-  noticeSub:    { color: '#4a4a7a', fontSize: 12, lineHeight: 18 },
+  noticeIcon:  { fontSize: 22 },
+  noticeTitle: { color: '#9a98ff', fontWeight: '700', fontSize: 14, marginBottom: 4 },
+  noticeSub:   { color: '#4a4a7a', fontSize: 12, lineHeight: 18 },
 
-  // Steps
   stepsCard: {
     backgroundColor: CARD, borderRadius: 22,
     padding: 20, marginBottom: 16,
     borderWidth: 1, borderColor: BORDER,
   },
-  stepsLabel:   { color: '#222', fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 18 },
-  stepRow:      { flexDirection: 'row', alignItems: 'flex-start', gap: 14 },
-  stepDot:      { width: 10, height: 10, borderRadius: 5, marginTop: 4, flexShrink: 0 },
-  stepTitle:    { color: WHITE, fontSize: 14, fontWeight: '600', marginBottom: 2 },
-  stepSub:      { color: '#3a3a3a', fontSize: 12, lineHeight: 18 },
-  stepLine:     { width: 2, height: 20, backgroundColor: '#1a1a1a', marginLeft: 4, marginVertical: 4 },
+  stepsLabel: { color: '#222', fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 18 },
+  stepRow:    { flexDirection: 'row', alignItems: 'flex-start', gap: 14 },
+  stepDot:    { width: 10, height: 10, borderRadius: 5, marginTop: 4, flexShrink: 0 },
+  stepTitle:  { color: WHITE, fontSize: 14, fontWeight: '600', marginBottom: 2 },
+  stepSub:    { color: '#3a3a3a', fontSize: 12, lineHeight: 18 },
+  stepLine:   { width: 2, height: 20, backgroundColor: '#1a1a1a', marginLeft: 4, marginVertical: 4 },
 
-  // Buttons
-  btnsWrap:     { gap: 10 },
+  btnsWrap: { gap: 10 },
   trackBtn: {
     backgroundColor: '#9C27B0', borderRadius: 18,
     padding: 17, alignItems: 'center',
     shadowColor: '#9C27B0', shadowOpacity: 0.35, shadowRadius: 14, elevation: 8,
   },
-  trackBtnTxt:  { color: WHITE, fontSize: 16, fontWeight: '800' },
+  trackBtnTxt: { color: WHITE, fontSize: 16, fontWeight: '800' },
   homeBtn: {
     backgroundColor: CARD, borderRadius: 18,
     padding: 16, alignItems: 'center',
     borderWidth: 1, borderColor: BORDER,
   },
-  homeBtnTxt:   { color: '#333', fontSize: 15, fontWeight: '600' },
+  homeBtnTxt: { color: '#333', fontSize: 15, fontWeight: '600' },
 })
-

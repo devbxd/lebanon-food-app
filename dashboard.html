@@ -26,9 +26,10 @@
       --red:      #c05a5a;
       --radius:   12px;
       --chat-w:   340px;
+      --topbar-h: 52px;
     }
-    html, body { height:100%; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background:var(--bg); color:var(--text); font-size:13px; overflow:hidden; }
+    html, body { height:100%; overflow:hidden; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background:var(--bg); color:var(--text); font-size:13px; }
 
     /* ── SCROLLBARS ── */
     ::-webkit-scrollbar { width:4px; height:4px; }
@@ -65,11 +66,11 @@
     /* ══════════════════════════════════
        APP SHELL
     ══════════════════════════════════ */
-    .app { display:flex; flex-direction:column; height:100vh; display:none; }
+    .app { display:flex; flex-direction:column; height:100vh; display:none; overflow:hidden; }
 
     /* ── TOPBAR ── */
     .topbar {
-      height:52px; min-height:52px; background:var(--surface); border-bottom:1px solid var(--border);
+      height:var(--topbar-h); min-height:var(--topbar-h); background:var(--surface); border-bottom:1px solid var(--border);
       display:flex; align-items:center; padding:0 20px; gap:16px; z-index:200; flex-shrink:0;
     }
     .topbar-brand { font-size:16px; font-weight:700; color:var(--text); letter-spacing:-0.5px; flex-shrink:0; }
@@ -101,10 +102,10 @@
     .btn-logout:hover { background:rgba(192,90,90,0.1); color:var(--red); }
 
     /* ── LAYOUT ── */
-    .app-body { display:flex; flex:1; overflow:hidden; }
+    .app-body { display:flex; flex:1; min-height:0; overflow:hidden; }
 
     /* ── SIDEBAR ── */
-    .sidebar { width:210px; min-width:210px; background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; overflow-y:auto; padding:16px 0; gap:4px; }
+    .sidebar { width:210px; min-width:210px; background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; overflow-y:auto; padding:16px 0; gap:4px; flex-shrink:0; }
     .sidebar-section { padding:0 12px; margin-bottom:20px; }
     .sidebar-label { font-size:10px; color:var(--text3); font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px; padding:0 6px; }
     .nav-item { display:flex; align-items:center; gap:9px; padding:7px 10px; border-radius:8px; color:var(--text2); cursor:pointer; font-size:13px; transition:all .1s; margin-bottom:1px; user-select:none; }
@@ -140,93 +141,69 @@
     .hours-link:hover { color:var(--purple); background:rgba(138,120,207,0.06); }
 
     /* ── MAIN CONTENT ── */
-    .main { flex:1; overflow:hidden; display:flex; flex-direction:column; }
-    .page { display:none; flex:1; overflow-y:auto; padding:24px 28px; }
-    .page.active { display:block; }
+    .main { flex:1; min-width:0; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
 
-    /* ── PAGE HEADER ── */
-    .ph { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:22px; }
-    .ph-title { font-size:20px; font-weight:700; color:var(--text); letter-spacing:-0.5px; }
-    .ph-sub { font-size:12px; color:var(--text3); margin-top:3px; }
+    /* ── PAGE ORDERS ── */
+    #page-orders { display:none; flex-direction:column; flex:1; min-height:0; overflow:hidden; padding:0; }
+    #page-orders.active { display:flex; }
 
-    /* ── BANNERS ── */
-    .banner { display:none; align-items:center; gap:10px; border-radius:10px; padding:11px 14px; margin-bottom:18px; font-size:12px; font-weight:500; border:1px solid; }
-    .banner.visible { display:flex; }
-    .banner-closed { background:rgba(192,90,90,0.08); border-color:rgba(192,90,90,0.2); color:var(--red); }
-    .banner-auto   { background:rgba(138,120,207,0.08); border-color:rgba(138,120,207,0.2); color:var(--purple); }
-    .banner i { font-size:16px; flex-shrink:0; }
-    .banner-reopen { color:var(--orange); cursor:pointer; text-decoration:underline; margin-left:6px; }
+    .orders-header-zone { flex-shrink:0; padding:20px 24px 0; }
 
-    /* ── STATS ── */
-    .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:10px; }
-    .stats-grid2 { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:22px; }
-    .stat-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; transition:border-color .2s; }
-    .stat-card:hover { border-color:var(--border2); }
-    .stat-card.hi-o { border-color:rgba(232,118,58,0.2); background:rgba(232,118,58,0.04); }
-    .stat-card.hi-p { border-color:rgba(138,120,207,0.2); background:rgba(138,120,207,0.04); }
-    .stat-lbl { font-size:10px; color:var(--text3); font-weight:600; letter-spacing:0.5px; text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:5px; }
-    .stat-lbl i { font-size:13px; }
-    .stat-val { font-size:26px; font-weight:700; letter-spacing:-1px; line-height:1; margin-bottom:4px; }
-    .stat-sub { font-size:11px; color:var(--text3); }
-    .c-o { color:var(--orange); }
-    .c-b { color:var(--blue); }
-    .c-p { color:var(--purple); }
-    .c-g { color:var(--green); }
-    .c-m { color:var(--text3); }
+    /* ── ORDERS BODY: two columns that scroll independently ── */
+    .orders-body-zone { flex:1; min-height:0; display:flex; gap:16px; padding:12px 24px 24px; overflow:hidden; }
 
-    /* ── TABS ── */
-    .tabs { display:flex; align-items:center; gap:2px; margin-bottom:18px; border-bottom:1px solid var(--border); }
-    .tab { padding:7px 14px; font-size:12px; color:var(--text2); cursor:pointer; border:none; background:transparent; border-bottom:2px solid transparent; margin-bottom:-1px; transition:color .15s; font-family:inherit; }
-    .tab:hover { color:var(--text); }
-    .tab.active { color:var(--text); border-bottom-color:var(--orange); }
-    .tab .n { display:inline-block; background:var(--card); border:1px solid var(--border2); color:var(--text3); font-size:10px; padding:1px 5px; border-radius:8px; margin-left:4px; }
-    .tab.active .n { background:rgba(232,118,58,0.15); border-color:rgba(232,118,58,0.3); color:var(--orange); }
-    .sec-hdr { display:flex; align-items:center; gap:8px; margin-bottom:12px; font-size:11px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:0.8px; }
-    .sec-count { background:var(--card); border:1px solid var(--border2); color:var(--text3); font-size:10px; padding:2px 7px; border-radius:8px; }
+    .orders-col { flex:1; min-width:0; min-height:0; overflow-y:auto; padding-right:4px; }
 
-    /* ══════════════════════════════════
-       ORDERS — TWO COLUMN WITH CHAT
-    ══════════════════════════════════ */
-    .orders-layout { display:flex; gap:16px; overflow:hidden; }
-    .orders-col { flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; padding-right:4px; }
-
-    /* Chat panel */
+    /* ── CHAT PANEL ── */
     .chat-panel {
-  width:var(--chat-w); min-width:var(--chat-w);
-  background:var(--card); border:1px solid var(--border);
-  border-radius:var(--radius); display:flex; flex-direction:column;
-  overflow:hidden; position:sticky; top:0; max-height:550px;
-  transition:all .3s;
-}
+      width:var(--chat-w);
+      min-width:var(--chat-w);
+      flex-shrink:0;
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+      /* No sticky/fixed — it's in a flex row, height is constrained by parent */
+      align-self:flex-start;
+      max-height:100%;
+    }
     .chat-panel-header {
       padding:14px 16px; border-bottom:1px solid var(--border);
-      background:var(--surface);
+      background:var(--surface); flex-shrink:0;
     }
     .chat-panel-title { font-size:13px; font-weight:700; color:var(--text); display:flex; align-items:center; gap:8px; }
     .chat-panel-title i { font-size:16px; color:var(--orange); }
     .chat-panel-sub { font-size:11px; color:var(--text3); margin-top:3px; }
 
-    /* Chat selector tabs */
-    .chat-tabs { display:flex; gap:1px; padding:8px 8px 0; overflow-x:auto; }
+    /* Chat tabs */
+    .chat-tabs { display:flex; gap:1px; padding:8px 8px 0; overflow-x:auto; flex-shrink:0; }
     .chat-tab {
       flex-shrink:0; display:flex; align-items:center; gap:6px;
       padding:6px 10px; border-radius:8px 8px 0 0; cursor:pointer;
       font-size:11px; color:var(--text3); transition:all .15s;
-      background:transparent; border:none; font-family:inherit;
-      border:1px solid transparent; border-bottom:none;
+      background:transparent; border:1px solid transparent; border-bottom:none; font-family:inherit;
     }
     .chat-tab:hover { background:var(--border); color:var(--text2); }
     .chat-tab.active { background:var(--bg); color:var(--text); border-color:var(--border); }
     .chat-tab-avatar { width:20px; height:20px; border-radius:5px; background:var(--orange-g); color:var(--orange); font-size:9px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
     .chat-tab-unread { background:var(--orange); color:#fff; font-size:9px; font-weight:700; padding:1px 5px; border-radius:10px; }
 
-    /* Chat conversation */
-    .chat-conversations { flex:1; display:flex; flex-direction:column; overflow:hidden; background:var(--bg); }
+    /* Chat conversations zone */
+    .chat-conversations {
+      flex:1;
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+      background:var(--bg);
+      min-height:0;
+    }
     .chat-empty-state { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; color:var(--text3); padding:24px; }
     .chat-empty-state i { font-size:32px; color:var(--border2); }
     .chat-empty-state p { font-size:12px; text-align:center; line-height:1.5; }
 
-    .chat-conv { display:none; flex:1; flex-direction:column; overflow:hidden; }
+    .chat-conv { display:none; flex:1; flex-direction:column; overflow:hidden; min-height:0; }
     .chat-conv.active { display:flex; }
 
     /* Chat conv header */
@@ -241,7 +218,7 @@
     .chat-meta-chip i { font-size:12px; color:var(--text3); }
 
     /* Messages */
-   .chat-msgs { flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:8px; max-height:220px; }
+    .chat-msgs { flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:8px; min-height:0; }
     .chat-msg { display:flex; flex-direction:column; max-width:82%; }
     .chat-msg.mine { align-self:flex-end; align-items:flex-end; }
     .chat-msg.theirs { align-self:flex-start; align-items:flex-start; }
@@ -260,7 +237,7 @@
     .chat-empty-msgs p { font-size:11px; color:var(--text3); }
 
     /* Quick replies */
-    .chat-qr { display:flex; gap:4px; flex-wrap:wrap; padding:8px 12px; border-top:1px solid var(--border); background:var(--surface); }
+    .chat-qr { display:flex; gap:4px; flex-wrap:wrap; padding:8px 12px; border-top:1px solid var(--border); background:var(--surface); flex-shrink:0; }
     .qr-btn { background:var(--card); border:1px solid var(--border2); color:var(--text3); font-size:10px; padding:4px 9px; border-radius:20px; cursor:pointer; transition:all .15s; font-family:inherit; white-space:nowrap; }
     .qr-btn:hover { border-color:var(--orange); color:var(--orange); background:var(--orange-g); }
 
@@ -274,9 +251,52 @@
     .chat-send i { font-size:14px; }
     .chat-send:disabled { opacity:.4; cursor:default; }
 
+    /* ── OTHER PAGES ── */
+    .page { display:none; overflow-y:auto; padding:24px 28px; flex:1; }
+    .page.active { display:block; }
+
+    /* ── PAGE HEADER ── */
+    .ph { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:22px; }
+    .ph-title { font-size:20px; font-weight:700; color:var(--text); letter-spacing:-0.5px; }
+    .ph-sub { font-size:12px; color:var(--text3); margin-top:3px; }
+
+    /* ── BANNERS ── */
+    .banner { display:none; align-items:center; gap:10px; border-radius:10px; padding:11px 14px; margin-bottom:14px; font-size:12px; font-weight:500; border:1px solid; }
+    .banner.visible { display:flex; }
+    .banner-closed { background:rgba(192,90,90,0.08); border-color:rgba(192,90,90,0.2); color:var(--red); }
+    .banner-auto   { background:rgba(138,120,207,0.08); border-color:rgba(138,120,207,0.2); color:var(--purple); }
+    .banner i { font-size:16px; flex-shrink:0; }
+    .banner-reopen { color:var(--orange); cursor:pointer; text-decoration:underline; margin-left:6px; }
+
+    /* ── STATS ── */
+    .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:10px; }
+    .stats-grid2 { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px; }
+    .stat-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; transition:border-color .2s; }
+    .stat-card:hover { border-color:var(--border2); }
+    .stat-card.hi-o { border-color:rgba(232,118,58,0.2); background:rgba(232,118,58,0.04); }
+    .stat-card.hi-p { border-color:rgba(138,120,207,0.2); background:rgba(138,120,207,0.04); }
+    .stat-lbl { font-size:10px; color:var(--text3); font-weight:600; letter-spacing:0.5px; text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:5px; }
+    .stat-lbl i { font-size:13px; }
+    .stat-val { font-size:26px; font-weight:700; letter-spacing:-1px; line-height:1; margin-bottom:4px; }
+    .stat-sub { font-size:11px; color:var(--text3); }
+    .c-o { color:var(--orange); }
+    .c-b { color:var(--blue); }
+    .c-p { color:var(--purple); }
+    .c-g { color:var(--green); }
+    .c-m { color:var(--text3); }
+
+    /* ── TABS ── */
+    .tabs { display:flex; align-items:center; gap:2px; margin-bottom:12px; border-bottom:1px solid var(--border); }
+    .tab { padding:7px 14px; font-size:12px; color:var(--text2); cursor:pointer; border:none; background:transparent; border-bottom:2px solid transparent; margin-bottom:-1px; transition:color .15s; font-family:inherit; }
+    .tab:hover { color:var(--text); }
+    .tab.active { color:var(--text); border-bottom-color:var(--orange); }
+    .tab .n { display:inline-block; background:var(--card); border:1px solid var(--border2); color:var(--text3); font-size:10px; padding:1px 5px; border-radius:8px; margin-left:4px; }
+    .tab.active .n { background:rgba(232,118,58,0.15); border-color:rgba(232,118,58,0.3); color:var(--orange); }
+    .sec-hdr { display:flex; align-items:center; gap:8px; margin-bottom:10px; font-size:11px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:0.8px; }
+    .sec-count { background:var(--card); border:1px solid var(--border2); color:var(--text3); font-size:10px; padding:2px 7px; border-radius:8px; }
+
     /* ── ORDER CARDS ── */
-    .order-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; transition:border-color .2s, box-shadow .2s; cursor:pointer; }
-    .order-card:hover { border-color:var(--border2); }
+    .order-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; transition:border-color .2s, box-shadow .2s; margin-bottom:10px; }
     .order-card.is-pending { border-color:rgba(232,118,58,0.25); }
     .order-card.is-whish   { border-color:rgba(138,120,207,0.25); }
     .order-card.chat-active { border-color:rgba(232,118,58,0.5); box-shadow:0 0 0 3px rgba(232,118,58,0.08); }
@@ -469,8 +489,6 @@
     .notif-close:hover { color:var(--text); }
 
     /* ── RTL ── */
-    [dir="rtl"] .topbar-left { flex-direction:row-reverse; }
-    [dir="rtl"] .topbar-right { flex-direction:row-reverse; }
     [dir="rtl"] .sidebar { border-right:none; border-left:1px solid var(--border); }
     [dir="rtl"] .nav-badge, [dir="rtl"] .nav-badge-g, [dir="rtl"] .nav-badge-p { margin-left:0; margin-right:auto; }
     [dir="rtl"] .oc-right { align-items:flex-start; }
@@ -484,9 +502,9 @@
       .sidebar { display:none; }
       .stats-grid { grid-template-columns:repeat(2,1fr); }
       .stats-grid2 { grid-template-columns:repeat(2,1fr); }
-      .page { padding:16px; }
+      .orders-header-zone { padding:12px 16px 0; }
+      .orders-body-zone { padding:10px 16px 16px; }
       .chat-panel { display:none; }
-      .orders-col { flex:1; }
     }
   </style>
 </head>
@@ -609,27 +627,31 @@
   </div>
 </div>
 
-<!-- LOGIN SCREEN -->
 <div id="login-screen" class="login-screen">
   <div class="login-wrap">
     <div class="login-logo">Resto<span>.</span>dash</div>
     <div class="login-tagline">Tableau de bord restaurant · Lebanon Food</div>
     <div class="login-card">
-      <div class="login-card-title">Connexion</div>
-      <div class="login-card-sub">Accès réservé aux restaurants partenaires</div>
-      <div class="field">
-        <label>Ton restaurant</label>
-        <select id="resto-select"><option value="">Chargement...</option></select>
+      <div class="login-card-title" id="login-title">Connexion en cours...</div>
+      <div class="login-card-sub" id="login-sub">Vérification de votre accès, merci de patienter.</div>
+      <!-- Spinner -->
+      <div id="login-spinner" style="display:flex;justify-content:center;padding:20px 0;">
+        <i class="ti ti-loader-2" style="font-size:28px;color:var(--orange);animation:spin 1s linear infinite;"></i>
       </div>
-      <div class="field">
-        <label>Mot de passe</label>
-        <input type="password" id="pwd-input" placeholder="••••••••" onkeydown="if(event.key==='Enter') login()" />
+      <!-- Erreur si lien invalide/expiré -->
+      <div id="login-error" style="display:none;background:rgba(192,90,90,0.08);border:1px solid rgba(192,90,90,0.2);border-radius:10px;padding:14px;text-align:center;">
+        <div style="color:var(--red);font-size:13px;font-weight:600;margin-bottom:6px;">❌ Lien invalide ou expiré</div>
+        <div style="color:var(--text3);font-size:12px;">Demande un nouveau lien de connexion à l'administrateur.</div>
       </div>
-      <button class="btn-login" onclick="login()">Se connecter →</button>
     </div>
     <div class="login-footer">Lebanon Food · Dashboard v2.0</div>
   </div>
 </div>
+ 
+<style>
+@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+</style>
+ 
 
 <!-- APP -->
 <div class="app" id="app-screen">
@@ -661,7 +683,6 @@
   <div class="app-body">
     <!-- SIDEBAR -->
     <div class="sidebar">
-      <!-- Status card -->
       <div class="sb-status is-open" id="sb-status">
         <div class="sb-status-lbl">Statut</div>
         <div class="sb-status-txt" id="sb-status-txt">🟢 Ouvert</div>
@@ -680,13 +701,13 @@
           <i class="ti ti-layout-list"></i> Actives
           <span class="nav-badge" id="nav-active-cnt" style="display:none">0</span>
         </div>
-        <div class="nav-item" onclick="tabFilter(event,'delivered')">
+        <div class="nav-item" onclick="showPage('orders',this);tabFilter(event,'delivered')">
           <i class="ti ti-check"></i> Livrées
         </div>
-        <div class="nav-item" onclick="tabFilter(event,'refused')">
+        <div class="nav-item" onclick="showPage('orders',this);tabFilter(event,'refused')">
           <i class="ti ti-x"></i> Refusées
         </div>
-        <div class="nav-item" onclick="tabFilter(event,'all')">
+        <div class="nav-item" onclick="showPage('orders',this);tabFilter(event,'all')">
           <i class="ti ti-list"></i> Toutes
         </div>
       </div>
@@ -703,9 +724,10 @@
     <div class="main">
 
       <!-- PAGE ORDERS -->
-      <div class="page active" id="page-orders" style="overflow:hidden; padding-bottom:0;">
-        <div style="padding:20px 24px 0;">
-          <!-- Banners -->
+      <div id="page-orders" class="active">
+
+        <!-- Fixed header zone: banners + stats + tabs -->
+        <div class="orders-header-zone">
           <div class="banner banner-closed" id="banner-closed">
             <i class="ti ti-moon-off"></i>
             <div><strong>Restaurant fermé</strong> — Les clients voient votre page en grisé.<span class="banner-reopen" onclick="setMode('open')">Rouvrir →</span></div>
@@ -715,7 +737,6 @@
             <div id="banner-auto-txt">Mode automatique · Vérification...</div>
           </div>
 
-          <!-- Stats -->
           <div class="stats-grid">
             <div class="stat-card hi-o"><div class="stat-lbl"><i class="ti ti-clock"></i> En attente</div><div class="stat-val c-o" id="cnt-pending">0</div><div class="stat-sub">nécessite action</div></div>
             <div class="stat-card"><div class="stat-lbl"><i class="ti ti-tools-kitchen-2"></i> En préparation</div><div class="stat-val c-b" id="cnt-prep">0</div><div class="stat-sub">en cuisine</div></div>
@@ -728,7 +749,6 @@
             <div class="stat-card"><div class="stat-lbl"><i class="ti ti-percentage"></i> Commission (5%)</div><div class="stat-val c-m" id="total-comm">$0</div><div class="stat-sub">à reverser</div></div>
           </div>
 
-          <!-- Tabs -->
           <div class="tabs">
             <button class="tab active" onclick="tabFilter(event,'active')">Actives <span class="n" id="tab-active-n">0</span></button>
             <button class="tab" onclick="tabFilter(event,'whish')">Whish <span class="n" id="tab-whish-n">0</span></button>
@@ -739,8 +759,8 @@
           <div class="sec-hdr">Commandes <span class="sec-count" id="orders-count">0</span></div>
         </div>
 
-        <!-- Two-col layout: orders + chat -->
-        <div class="orders-layout" style="padding:0 24px 24px; overflow:hidden; flex:1; max-height:calc(100vh - 52px - 50px);">
+        <!-- Scrollable body: orders list + chat panel side by side -->
+        <div class="orders-body-zone">
           <div class="orders-col" id="orders-container">
             <div class="empty"><i class="ti ti-loader"></i><p>Chargement...</p></div>
           </div>
@@ -753,7 +773,7 @@
             </div>
             <div class="chat-tabs" id="chat-tabs"></div>
             <div class="chat-conversations" id="chat-convs">
-              <div class="chat-empty-state">
+              <div class="chat-empty-state" id="chat-empty-state">
                 <i class="ti ti-messages"></i>
                 <p>Clique sur <strong style="color:var(--text2)">"Chat"</strong> dans une commande pour ouvrir la conversation</p>
               </div>
@@ -788,7 +808,6 @@ const SUPABASE_URL = 'https://nrorzrzigeztgvdvgtdv.supabase.co'
 const SUPABASE_KEY = 'sb_publishable_DFixcj3yogS-1sS3fpOQww_YIccZM9f'
 const { createClient } = supabase
 const db = createClient(SUPABASE_URL, SUPABASE_KEY)
-const RESTO_PWD = '1234'
 
 let restoId = null, restoName = null
 let allOrders = [], allMenuItems = []
@@ -962,32 +981,81 @@ function showNotif(order) {
 function dismissNotif(){document.getElementById('order-notif').classList.remove('show');clearTimeout(notifTimer);clearInterval(tabTitleInt);document.title=origTitle;notifOrderId=null}
 async function acceptFromNotif(){if(!notifOrderId)return;const id=notifOrderId;dismissNotif();await db.from('orders').update({status:'preparing'}).eq('id',id);await fetchOrders();showToast(t('order_accepted'))}
 
-/* ── AUTH ── */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 async function loadRestaurants() {
-  const {data}=await db.from('restaurants').select('id,name').order('name')
-  const sel=document.getElementById('resto-select')
-  sel.innerHTML='<option value="">— Choisis ton restaurant —</option>'
-  if(data)data.forEach(r=>sel.innerHTML+=`<option value="${r.id}" data-name="${r.name}">${r.name}</option>`)
-}
-function login() {
-  const sel=document.getElementById('resto-select'), pwd=document.getElementById('pwd-input').value, opt=sel.options[sel.selectedIndex]
-  if(!sel.value)return alert('Choisis un restaurant !')
-  if(pwd!==RESTO_PWD)return alert('Mot de passe incorrect !')
-  restoId=sel.value; restoName=opt.dataset.name
-  document.getElementById('login-screen').style.display='none'
-  document.getElementById('app-screen').style.display='flex'
-  document.getElementById('topbar-resto').textContent=restoName
-  document.getElementById('menu-sub').textContent=restoName
-  if('Notification' in window&&Notification.permission==='default')Notification.requestPermission()
+  const { data: { session } } = await db.auth.getSession()
+
+  if (!session) {
+    document.getElementById('login-spinner').style.display = 'none'
+    document.getElementById('login-error').style.display = 'block'
+    document.getElementById('login-title').textContent = 'Accès refusé'
+    document.getElementById('login-sub').textContent = 'Aucune session valide détectée.'
+    return
+  }
+
+  const { data: resto } = await db
+    .from('restaurants')
+    .select('id, name')
+    .eq('auth_user_id', session.user.id)
+    .single()
+
+  if (!resto) {
+    document.getElementById('login-spinner').style.display = 'none'
+    document.getElementById('login-error').style.display = 'block'
+    document.getElementById('login-title').textContent = 'Restaurant introuvable'
+    document.getElementById('login-sub').textContent = 'Ce compte n\'est lié à aucun restaurant. Contacte l\'administrateur.'
+    return
+  }
+
+  restoId = resto.id
+  restoName = resto.name
+  document.getElementById('login-screen').style.display = 'none'
+  document.getElementById('app-screen').style.display = 'flex'
+  document.getElementById('topbar-resto').textContent = restoName
+  document.getElementById('menu-sub').textContent = restoName
+  if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission()
   startDashboard()
 }
+
+
+
+
+
+
+
+
 function logout() {
-  if(channel)db.removeChannel(channel)
-  if(autoInterval)clearInterval(autoInterval)
-  dismissNotif(); restoId=null
-  document.getElementById('app-screen').style.display='none'
-  document.getElementById('login-screen').style.display='flex'
+  db.auth.signOut()  // déconnecte la session Supabase
+  if (channel) db.removeChannel(channel)
+  if (autoInterval) clearInterval(autoInterval)
+  dismissNotif()
+  restoId = null
+  document.getElementById('app-screen').style.display = 'none'
+  document.getElementById('login-screen').style.display = 'flex'
+  document.getElementById('login-title').textContent = 'Déconnecté'
+  document.getElementById('login-sub').textContent = 'Demande un nouveau lien à l\'administrateur pour te reconnecter.'
+  document.getElementById('login-spinner').style.display = 'none'
 }
+
+
+
+
+
+
+
 
 /* ── DASHBOARD ── */
 async function startDashboard() {
@@ -1007,10 +1075,36 @@ async function startDashboard() {
       await fetchOrders()
     }).subscribe()
 }
+
 async function fetchOrders() {
   const {data}=await db.from('orders').select('*').eq('restaurant_id',restoId).order('created_at',{ascending:false})
-  if(data){allOrders=data;updateStats();renderOrders()}
+  if(data){
+    allOrders=data
+    updateStats()
+
+    // ── AUTO-CLEAR CHAT if active order is now done ──
+    if (activeChatOrderId) {
+      const activeOrder = allOrders.find(o => o.id === activeChatOrderId)
+      if (!activeOrder || activeOrder.status === 'delivered' || activeOrder.status === 'refused') {
+        clearChatPanel()
+      }
+    }
+
+    renderOrders()
+  }
 }
+
+/* ── Clear the chat panel back to empty state ── */
+function clearChatPanel() {
+  activeChatOrderId = null
+  const convs = document.getElementById('chat-convs')
+  convs.innerHTML = `<div class="chat-empty-state" id="chat-empty-state">
+    <i class="ti ti-messages"></i>
+    <p>Clique sur <strong style="color:var(--text2)">"Chat"</strong> dans une commande pour ouvrir la conversation</p>
+  </div>`
+  document.getElementById('chat-tabs').innerHTML = ''
+}
+
 function updateStats() {
   const today=new Date().toDateString()
   document.getElementById('cnt-pending').textContent=allOrders.filter(o=>o.status==='pending').length
@@ -1082,9 +1176,12 @@ function renderOrders() {
       actions=actMap[order.status]||''
     }
 
-    const canChat=order.status!=='pending'&&order.status!=='refused'
-    const isChatActive=activeChatOrderId===order.id
-    const chatBtn=canChat?`<button class="act-btn act-chat ${isChatActive?'active':''}" onclick="openChatFor('${order.id}','${escHtml(order.customer_name)}','${order.customer_phone||''}')"><i class="ti ti-message-circle"></i> Chat ${isChatActive?'(actif)':''}</button>`:''
+    // Chat button only for non-terminal, non-pending orders
+    const canChat = order.status !== 'pending' && order.status !== 'refused' && order.status !== 'delivered'
+    const isChatActive = activeChatOrderId === order.id
+    const chatBtn = canChat
+      ? `<button class="act-btn act-chat ${isChatActive?'active':''}" onclick="openChatFor('${order.id}','${escHtml(order.customer_name)}','${order.customer_phone||''}')"><i class="ti ti-message-circle"></i> Chat${isChatActive?' (actif)':''}</button>`
+      : ''
 
     const itemsHtml=items.map(item=>{
       const sel=item.selectedOptions||[]
@@ -1128,24 +1225,23 @@ function renderOrders() {
     </div>`
   }).join('')
 
-  // Init chat for eligible orders
-  orders.filter(o=>o.status!=='pending'&&o.status!=='refused').forEach(o=>initChat(o.id))
+  // Init realtime chat for eligible (active) orders only
+  orders.filter(o => o.status !== 'pending' && o.status !== 'refused' && o.status !== 'delivered').forEach(o => initChat(o.id))
   updateChatTabs()
 }
 
 /* ══════════════════════════════════
-   CHAT PANEL — LATÉRAL
+   CHAT PANEL
 ══════════════════════════════════ */
 function openChatFor(orderId, customerName, customerPhone) {
   activeChatOrderId = orderId
-  renderOrders() // refresh card highlight
+  renderOrders()
   initChat(orderId)
   renderChatPanel(orderId, customerName, customerPhone)
 }
 
 function renderChatPanel(orderId, customerName, customerPhone) {
   const convs = document.getElementById('chat-convs')
-  // Show this conversation
   convs.innerHTML = `
     <div class="chat-conv active" id="chatconv-${orderId}">
       <div class="chat-conv-hdr">
@@ -1176,7 +1272,9 @@ function renderChatPanel(orderId, customerName, customerPhone) {
 
 function updateChatTabs() {
   const tabs = document.getElementById('chat-tabs')
-  const eligibleOrders = allOrders.filter(o => o.status !== 'pending' && o.status !== 'refused' && chatMsgs[o.id])
+  const eligibleOrders = allOrders.filter(o =>
+    o.status !== 'pending' && o.status !== 'refused' && o.status !== 'delivered' && chatMsgs[o.id]
+  )
   if (!eligibleOrders.length) { tabs.innerHTML=''; return }
   tabs.innerHTML = eligibleOrders.map(o => {
     const unread = (chatMsgs[o.id]||[]).filter(m=>m.sender==='client').length
@@ -1254,11 +1352,20 @@ async function rejectWhish(orderId){if(!confirm('Rejeter le paiement et refuser 
 
 /* ── MENU ── */
 function showPage(page,navEl) {
+  // Hide all pages
+  document.getElementById('page-orders').classList.remove('active')
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'))
-  document.getElementById('page-'+page).classList.add('active')
+  // Show the right one
+  if(page==='orders') {
+    document.getElementById('page-orders').classList.add('active')
+  } else {
+    const el = document.getElementById('page-'+page)
+    if(el) el.classList.add('active')
+  }
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'))
   if(navEl)navEl.classList.add('active')
-  activePage=page; if(page==='menu')renderMenu()
+  activePage=page
+  if(page==='menu')renderMenu()
 }
 async function fetchMenu() {
   const {data}=await db.from('menu_items').select('*').eq('restaurant_id',restoId).order('category').order('name')
@@ -1339,4 +1446,3 @@ loadRestaurants()
 </script>
 </body>
 </html>
-

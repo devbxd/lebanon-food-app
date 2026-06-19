@@ -15,6 +15,7 @@ const BG = '#0a0a0a'
 const CARD = '#111'
 const BORDER = '#1c1c1c'
 const WHITE = '#fff'
+const DELIVERY_FEE = 1.40
 
 export default function CheckoutScreen() {
   const { t } = useTranslation()
@@ -31,6 +32,8 @@ export default function CheckoutScreen() {
   const [loading, setLoading] = useState(false)
   const [payMethod, setPayMethod] = useState('cash')
   const [isPreorder, setIsPreorder] = useState(false)
+
+  const totalWithDelivery = (parseFloat(total) + DELIVERY_FEE).toFixed(2)
 
   useEffect(() => {
     supabase.from('restaurants').select('is_open').eq('id', restaurantId).single()
@@ -66,7 +69,7 @@ export default function CheckoutScreen() {
     if (payMethod === 'whish') {
       Alert.alert(
         t('checkout.whishAlertTitle'),
-        t('checkout.whishAlertMsg', { total }),
+        t('checkout.whishAlertMsg', { total: totalWithDelivery }),
         [
           { text: t('checkout.cancel'), style: 'cancel' },
           { text: t('checkout.orderAndPay'), onPress: () => submitOrder() }
@@ -87,7 +90,7 @@ export default function CheckoutScreen() {
       customer_lat: coords?.latitude || null,
       customer_lng: coords?.longitude || null,
       items: cartItems,
-      total: parseFloat(total),
+      total: parseFloat(totalWithDelivery),
       status: isPreorder ? 'preorder' : 'pending',
       payment_method: payMethod,
       payment_status: payMethod === 'whish' ? 'waiting' : 'cash',
@@ -117,7 +120,7 @@ export default function CheckoutScreen() {
           <Text style={s.topSub} numberOfLines={1}>🍽️  {restaurantName}</Text>
         </View>
         <View style={s.totalPill}>
-          <Text style={s.totalPillTxt}>${total}</Text>
+          <Text style={s.totalPillTxt}>${totalWithDelivery}</Text>
         </View>
       </View>
 
@@ -156,11 +159,11 @@ export default function CheckoutScreen() {
           <View style={s.totalsCard}>
             <View style={s.totRow}>
               <Text style={s.totLabel}>{t('checkout.delivery')}</Text>
-              <Text style={s.totFree}>{t('checkout.free')}</Text>
+              <Text style={[s.totLabel, { color: ORANGE }]}>${DELIVERY_FEE.toFixed(2)}</Text>
             </View>
             <View style={[s.totRow, s.grandRow]}>
               <Text style={s.grandLabel}>{t('checkout.total')}</Text>
-              <Text style={s.grandAmt}>${total}</Text>
+              <Text style={s.grandAmt}>${totalWithDelivery}</Text>
             </View>
           </View>
         </View>
@@ -259,7 +262,7 @@ export default function CheckoutScreen() {
                 <Text key={i} style={s.whishStep}>{step}</Text>
               ))}
               <View style={s.whishAmtBox}>
-                <Text style={s.whishAmt}>💰  ${total}</Text>
+                <Text style={s.whishAmt}>💰  ${totalWithDelivery}</Text>
               </View>
               {[t('checkout.whishStep4'), t('checkout.whishStep5')].map((step, i) => (
                 <Text key={i} style={s.whishStep}>{step}</Text>
@@ -301,10 +304,10 @@ export default function CheckoutScreen() {
             {loading
               ? '⏳  Envoi en cours...'
               : isPreorder
-                ? `⏰  Précommander — $${total}`
+                ? `⏰  Précommander — $${totalWithDelivery}`
                 : payMethod === 'whish'
-                  ? `📱  ${t('checkout.orderBtnWhish')} — $${total}`
-                  : `🛵  ${t('checkout.orderBtn')} — $${total}`}
+                  ? `📱  ${t('checkout.orderBtnWhish')} — $${totalWithDelivery}`
+                  : `🛵  ${t('checkout.orderBtn')} — $${totalWithDelivery}`}
           </Text>
         </TouchableOpacity>
 
@@ -317,7 +320,6 @@ export default function CheckoutScreen() {
 const s = StyleSheet.create({
   container:    { flex: 1, backgroundColor: BG },
 
-  // Top bar
   topBar: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     backgroundColor: '#0c0c0c',
@@ -333,7 +335,6 @@ const s = StyleSheet.create({
 
   scroll:       { padding: 18, paddingTop: 20 },
 
-  // Preorder
   preorderBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     backgroundColor: '#0e0e2a', borderRadius: 16, padding: 16,
@@ -343,12 +344,10 @@ const s = StyleSheet.create({
   preorderTitle:  { color: '#9a98ff', fontWeight: '700', fontSize: 14, marginBottom: 3 },
   preorderSub:    { color: '#4a4a7a', fontSize: 12, lineHeight: 18 },
 
-  // Sections
   section:      { marginBottom: 24 },
   secLabel:     { color: '#2a2a2a', fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 10, paddingLeft: 2 },
   card:         { backgroundColor: CARD, borderRadius: 18, borderWidth: 1, borderColor: BORDER, overflow: 'hidden' },
 
-  // Items
   itemRow:      { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
   itemRowBorder:{ borderBottomWidth: 1, borderBottomColor: BORDER },
   qtyBox:       { width: 28, height: 28, borderRadius: 8, backgroundColor: ORANGE, justifyContent: 'center', alignItems: 'center' },
@@ -357,7 +356,6 @@ const s = StyleSheet.create({
   itemOpts:     { color: '#7a4aaa', fontSize: 11, marginTop: 2 },
   itemPrice:    { color: ORANGE, fontWeight: '700', fontSize: 14 },
 
-  // Totals
   totalsCard:   { backgroundColor: CARD, borderRadius: 18, borderWidth: 1, borderColor: BORDER, marginTop: 8, padding: 14 },
   totRow:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   totLabel:     { color: '#444', fontSize: 14 },
@@ -366,13 +364,11 @@ const s = StyleSheet.create({
   grandLabel:   { color: WHITE, fontSize: 17, fontWeight: '700' },
   grandAmt:     { color: ORANGE, fontSize: 20, fontWeight: '800' },
 
-  // Inputs
   inputWrap:    { padding: 14 },
   inputLabel:   { color: '#333', fontSize: 10, fontWeight: '700', letterSpacing: 0.8, marginBottom: 8 },
   input:        { color: WHITE, fontSize: 15, paddingVertical: 0 },
   inputMulti:   { height: 70, textAlignVertical: 'top' },
 
-  // GPS
   gpsBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     backgroundColor: '#0a1f10', borderRadius: 14, padding: 14,
@@ -385,7 +381,6 @@ const s = StyleSheet.create({
   coordsBox:    { backgroundColor: '#0a1f10', borderRadius: 10, padding: 8, marginTop: 6, borderWidth: 1, borderColor: '#1a4a20', alignItems: 'center' },
   coordsTxt:    { color: '#4CAF50', fontSize: 11 },
 
-  // Payment
   payRow:       { flexDirection: 'row', gap: 10 },
   payCard:      { flex: 1, backgroundColor: CARD, borderRadius: 18, padding: 16, alignItems: 'center', borderWidth: 2, borderColor: BORDER, position: 'relative' },
   payCardOrangeActive: { borderColor: ORANGE, backgroundColor: '#1a0c08' },
@@ -400,7 +395,6 @@ const s = StyleSheet.create({
   whishAmtBox:  { backgroundColor: '#6C3EE820', borderRadius: 12, padding: 12, alignItems: 'center', marginVertical: 8, borderWidth: 1, borderColor: '#6C3EE8' },
   whishAmt:     { color: '#a07af0', fontWeight: '800', fontSize: 22 },
 
-  // Order button
   orderBtn: {
     backgroundColor: ORANGE, borderRadius: 18, padding: 18,
     alignItems: 'center',

@@ -1,26 +1,39 @@
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useEffect, useRef, useState } from 'react'
 import {
-  Animated, Dimensions,
+  Animated,
+  Dimensions,
   Keyboard,
-  KeyboardAvoidingView, Platform,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from 'react-native'
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps'
 import { useTranslation } from '../lib/LanguageContext'
 import {
   registerForPushNotifications,
   sendLocalNotif,
-  STATUS_MESSAGES
+  STATUS_MESSAGES,
 } from '../lib/notifications'
 import { supabase } from '../lib/supabase'
 
-const { height: SCREEN_H } = Dimensions.get('window')
+const { height: SCREEN_H, width: SCREEN_W } = Dimensions.get('window')
+
+const ORANGE = '#FF6B35'
+const BG = '#0a0a0a'
+const CARD = '#141414'
+const BORDER = '#1e1e1e'
+const BORDER2 = '#252525'
+const WHITE = '#fff'
+const GRAY = '#888'
+const GRAY2 = '#444'
+const PURPLE = '#9C27B0'
 
 const DARK_MAP_STYLE = [
   { elementType: 'geometry', stylers: [{ color: '#1a1a2e' }] },
@@ -50,6 +63,7 @@ export default function TrackingScreen() {
   const [sendingMsg, setSendingMsg] = useState(false)
   const chatScrollRef = useRef(null)
   const chatSubRef = useRef(null)
+  const chatSlideAnim = useRef(new Animated.Value(SCREEN_H)).current
 
   const mapRef = useRef(null)
   const pulseAnim = useRef(new Animated.Value(1)).current
@@ -57,11 +71,11 @@ export default function TrackingScreen() {
   const pushTokenRef = useRef(null)
 
   const STATUS_CONFIG = {
-    pending:    { label: t('tracking.pending'),    emoji: '⏳', color: '#FF9800', step: 0 },
-    preparing:  { label: t('tracking.preparing'),  emoji: '👨‍🍳', color: '#2196F3', step: 1 },
-    on_the_way: { label: t('tracking.onTheWay'),   emoji: '🛵', color: '#9C27B0', step: 2 },
-    delivered:  { label: t('tracking.delivered'),  emoji: '✅', color: '#4CAF50', step: 3 },
-    refused:    { label: t('tracking.refused'),    emoji: '❌', color: '#f44336', step: -1 },
+    pending:    { label: t('tracking.pending'),   emoji: '⏳', color: '#FF9800', step: 0 },
+    preparing:  { label: t('tracking.preparing'), emoji: '👨‍🍳', color: '#2196F3', step: 1 },
+    on_the_way: { label: t('tracking.onTheWay'),  emoji: '🛵', color: PURPLE,    step: 2 },
+    delivered:  { label: t('tracking.delivered'), emoji: '✅', color: '#4CAF50', step: 3 },
+    refused:    { label: t('tracking.refused'),   emoji: '❌', color: '#f44336', step: -1 },
   }
 
   const STEPS = [
@@ -75,52 +89,35 @@ export default function TrackingScreen() {
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.3, duration: 800, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1.3, duration: 900, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1,   duration: 900, useNativeDriver: true }),
       ])
     ).start()
   }, [])
 
-  // Init push notifications au chargement
   useEffect(() => {
-    async function initPush() {
-      const token = await registerForPushNotifications(orderId)
-      pushTokenRef.current = token
-    }
-    initPush()
+    registerForPushNotifications(orderId).then(token => { pushTokenRef.current = token })
   }, [orderId])
 
   useEffect(() => {
     fetchOrder()
     fetchMessages()
 
-    // Realtime commande
     const orderSub = supabase
       .channel('tracking-' + orderId)
       .on('postgres_changes', {
         event: 'UPDATE', schema: 'public', table: 'orders',
-        filter: `id=eq.${orderId}`
+        filter: `id=eq.${orderId}`,
       }, (payload) => {
         const newOrder = payload.new
         const newStatus = newOrder.status
         const prevStatus = prevStatusRef.current
-
         setOrder(newOrder)
-
-        // Notif + son si statut a changé
         if (newStatus !== prevStatus && STATUS_MESSAGES[newStatus]) {
           const msg = STATUS_MESSAGES[newStatus]
-          sendLocalNotif({
-            title: msg.title,
-            body: msg.body,
-            data: { orderId, type: 'status' },
-            channel: 'order-status',
-          })
+          sendLocalNotif({ title: msg.title, body: msg.body, data: { orderId, type: 'status' }, channel: 'order-status' })
         }
-
         prevStatusRef.current = newStatus
-
-        // Mise à jour position livreur
         if (newOrder.driver_lat && newOrder.driver_lng) {
           const loc = { latitude: newOrder.driver_lat, longitude: newOrder.driver_lng }
           setDriverLocation(loc)
@@ -129,33 +126,23 @@ export default function TrackingScreen() {
       })
       .subscribe()
 
-    // Realtime chat
     chatSubRef.current = supabase
       .channel('chat-client-' + orderId)
       .on('postgres_changes', {
         event: 'INSERT', schema: 'public', table: 'order_messages',
-        filter: `order_id=eq.${orderId}`
+        filter: `order_id=eq.${orderId}`,
       }, (payload) => {
         const newMsg = payload.new
         setMessages(prev => [...prev, newMsg])
-
-        // Notif + son si message du resto
         if (newMsg.sender === 'restaurant') {
           setChatOpen(prev => {
             if (!prev) {
-              // Chat fermé → badge + notif
               setUnreadCount(c => c + 1)
-              sendLocalNotif({
-                title: '💬 Message du restaurant',
-                body: newMsg.message,
-                data: { orderId, type: 'chat' },
-                channel: 'chat',
-              })
+              sendLocalNotif({ title: '💬 Message du restaurant', body: newMsg.message, data: { orderId, type: 'chat' }, channel: 'chat' })
             }
             return prev
           })
         }
-
         setTimeout(() => chatScrollRef.current?.scrollToEnd({ animated: true }), 100)
       })
       .subscribe()
@@ -209,7 +196,22 @@ export default function TrackingScreen() {
   function openChat() {
     setChatOpen(true)
     setUnreadCount(0)
-    setTimeout(() => chatScrollRef.current?.scrollToEnd({ animated: false }), 150)
+    Animated.spring(chatSlideAnim, {
+      toValue: 0,
+      useNativeDriver: true,
+      tension: 70,
+      friction: 12,
+    }).start()
+    setTimeout(() => chatScrollRef.current?.scrollToEnd({ animated: false }), 200)
+  }
+
+  function closeChat() {
+    Keyboard.dismiss()
+    Animated.timing(chatSlideAnim, {
+      toValue: SCREEN_H,
+      duration: 260,
+      useNativeDriver: true,
+    }).start(() => setChatOpen(false))
   }
 
   function getInitialRegion() {
@@ -227,15 +229,16 @@ export default function TrackingScreen() {
     if (order?.restaurants?.lat) coords.push({ latitude: order.restaurants.lat, longitude: order.restaurants.lng })
     if (coords.length > 1) {
       mapRef.current.fitToCoordinates(coords, {
-        edgePadding: { top: 80, right: 60, bottom: 340, left: 60 }, animated: true
+        edgePadding: { top: 80, right: 60, bottom: 320, left: 60 }, animated: true,
       })
     }
   }
 
   if (loading || !order) {
     return (
-      <View style={styles.loadingScreen}>
-        <Text style={styles.loadingTxt}>{t('tracking.loading')}</Text>
+      <View style={s.loadingScreen}>
+        <Text style={s.loadingEmoji}>🛵</Text>
+        <Text style={s.loadingTxt}>{t('tracking.loading')}</Text>
       </View>
     )
   }
@@ -247,14 +250,12 @@ export default function TrackingScreen() {
   const showChat = order.status !== 'pending' && order.status !== 'refused'
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      {/* CARTE */}
+    <KeyboardAvoidingView style={s.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+
+      {/* ── MAP ── */}
       <MapView
         ref={mapRef}
-        style={styles.map}
+        style={s.map}
         provider={PROVIDER_GOOGLE}
         customMapStyle={DARK_MAP_STYLE}
         initialRegion={getInitialRegion()}
@@ -264,304 +265,403 @@ export default function TrackingScreen() {
       >
         {order.customer_lat && (
           <Marker coordinate={{ latitude: order.customer_lat, longitude: order.customer_lng }} title={t('tracking.yourAddress')}>
-            <View style={styles.markerClient}><Text style={styles.markerEmoji}>🏠</Text></View>
+            <View style={s.markerClient}><Text style={s.markerEmoji}>🏠</Text></View>
           </Marker>
         )}
         {order.restaurants?.lat && (
           <Marker coordinate={{ latitude: order.restaurants.lat, longitude: order.restaurants.lng }} title={order.restaurants.name}>
-            <View style={styles.markerResto}><Text style={styles.markerEmoji}>🍽️</Text></View>
+            <View style={s.markerResto}><Text style={s.markerEmoji}>🍽️</Text></View>
           </Marker>
         )}
         {driverLocation && (
           <Marker coordinate={driverLocation} title={order.driver_name || t('tracking.driver')}>
-            <View style={styles.markerDriverWrapper}>
-              <Animated.View style={[styles.markerDriverPulse, { transform: [{ scale: pulseAnim }] }]} />
-              <View style={styles.markerDriver}><Text style={styles.markerDriverEmoji}>🛵</Text></View>
+            <View style={s.markerDriverWrap}>
+              <Animated.View style={[s.markerDriverPulse, { transform: [{ scale: pulseAnim }] }]} />
+              <View style={s.markerDriver}><Text style={s.markerDriverEmoji}>🛵</Text></View>
             </View>
           </Marker>
         )}
         {driverLocation && order.customer_lat && (
           <Polyline
             coordinates={[driverLocation, { latitude: order.customer_lat, longitude: order.customer_lng }]}
-            strokeColor="#9C27B0" strokeWidth={3} lineDashPattern={[8, 4]}
+            strokeColor={PURPLE} strokeWidth={3} lineDashPattern={[8, 4]}
           />
         )}
       </MapView>
 
-      <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-        <Text style={styles.backBtnTxt}>←</Text>
+      {/* ── MAP CONTROLS ── */}
+      <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
+        <Text style={s.backBtnTxt}>←</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.recenterBtn} onPress={fitMap}>
-        <Text style={styles.recenterBtnTxt}>⊙</Text>
+      <TouchableOpacity style={s.recenterBtn} onPress={fitMap}>
+        <Text style={s.recenterBtnTxt}>⊙</Text>
       </TouchableOpacity>
 
-      {/* Chat bubble button (quand chat fermé) */}
-      {showChat && !chatOpen && (
-        <TouchableOpacity style={styles.chatFab} onPress={openChat} activeOpacity={0.85}>
-          <Text style={styles.chatFabEmoji}>💬</Text>
+      {/* ── CHAT FAB ── */}
+      {showChat && (
+        <TouchableOpacity style={s.chatFab} onPress={openChat} activeOpacity={0.85}>
+          <Text style={s.chatFabEmoji}>💬</Text>
           {unreadCount > 0 && (
-            <View style={styles.chatFabBadge}>
-              <Text style={styles.chatFabBadgeTxt}>{unreadCount}</Text>
+            <View style={s.chatFabBadge}>
+              <Text style={s.chatFabBadgeTxt}>{unreadCount}</Text>
             </View>
           )}
         </TouchableOpacity>
       )}
 
-      {/* BOTTOM SHEET */}
-      <View style={[styles.sheet, { height: chatOpen ? SCREEN_H * 0.75 : SCREEN_H * 0.42 }]}>
-        <View style={styles.sheetHandle} />
+      {/* ── BOTTOM SHEET ── */}
+      <View style={s.sheet}>
+        <View style={s.sheetHandle} />
 
-        {showChat && chatOpen ? (
-          <View style={styles.chatContainer}>
-            <View style={styles.chatHeader}>
-              <View style={styles.chatHeaderLeft}>
-                <View style={styles.chatHeaderAvatar}>
-                  <Text style={styles.chatHeaderAvatarTxt}>
-                    {order.restaurants?.name?.[0]?.toUpperCase() || '🍽️'}
-                  </Text>
+        {/* Status banner */}
+        <View style={[s.statusBanner, { backgroundColor: status.color + '15', borderColor: status.color + '35' }]}>
+          <Text style={s.statusEmoji}>{status.emoji}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={[s.statusLabel, { color: status.color }]}>{status.label}</Text>
+            <Text style={s.statusSub} numberOfLines={2}>
+              {order.status === 'pending'    && t('tracking.pendingSub')}
+              {order.status === 'preparing'  && t('tracking.preparingSub')}
+              {order.status === 'on_the_way' && `${order.driver_name || t('tracking.onTheWayDefault')} ${t('tracking.onTheWaySub')}`}
+              {order.status === 'delivered'  && t('tracking.deliveredSub')}
+              {order.status === 'refused'    && (order.refusal_reason || t('tracking.refusedSub'))}
+            </Text>
+          </View>
+          {/* Live chip */}
+          {isOnTheWay && driverLocation && (
+            <View style={s.liveChip}>
+              <Animated.View style={[s.liveDot, { transform: [{ scale: pulseAnim }] }]} />
+              <Text style={s.liveTxt}>LIVE</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Progress steps */}
+        {order.status !== 'refused' && (
+          <View style={s.stepsRow}>
+            {STEPS.map((step, i) => {
+              const done = i <= currentStep
+              const active = i === currentStep
+              return (
+                <View key={step.key} style={s.stepWrap}>
+                  {i < STEPS.length - 1 && (
+                    <View style={[s.stepLine, { backgroundColor: done && i < currentStep ? status.color : BORDER2 }]} />
+                  )}
+                  <View style={[
+                    s.stepCircle,
+                    done && { backgroundColor: status.color + '20', borderColor: status.color },
+                    active && { borderWidth: 2 },
+                  ]}>
+                    <Text style={[s.stepEmoji, !done && { opacity: 0.3 }]}>{step.emoji}</Text>
+                  </View>
+                  <Text style={[s.stepLabel, { color: done ? status.color : GRAY2 }]}>{step.label}</Text>
+                </View>
+              )
+            })}
+          </View>
+        )}
+
+        {/* Driver card */}
+        {order.driver_name && !isDelivered && (
+          <View style={s.driverCard}>
+            <View style={s.driverAvatar}>
+              <Text style={s.driverAvatarTxt}>{order.driver_name[0]?.toUpperCase()}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.driverLbl}>{t('tracking.yourDriver')}</Text>
+              <Text style={s.driverName}>{order.driver_name}</Text>
+            </View>
+            {showChat && (
+              <TouchableOpacity style={s.driverChatBtn} onPress={openChat}>
+                <Text style={s.driverChatEmoji}>💬</Text>
+                {unreadCount > 0 && <View style={s.driverChatBadge}><Text style={s.driverChatBadgeTxt}>{unreadCount}</Text></View>}
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
+        {/* Info row */}
+        <View style={s.infoRow}>
+          <View style={s.infoBox}>
+            <Text style={s.infoLbl}>{t('tracking.restaurant')}</Text>
+            <Text style={s.infoVal} numberOfLines={1}>{order.restaurants?.name}</Text>
+          </View>
+          <View style={[s.infoBox, s.infoBoxMid]}>
+            <Text style={s.infoLbl}>{t('tracking.total')}</Text>
+            <Text style={[s.infoVal, { color: ORANGE }]}>${order.total}</Text>
+          </View>
+          <View style={s.infoBox}>
+            <Text style={s.infoLbl}>{t('tracking.payment')}</Text>
+            <Text style={s.infoVal}>{order.payment_method === 'whish' ? '📱 Whish' : '💵 Cash'}</Text>
+          </View>
+        </View>
+
+        {/* Address */}
+        <View style={s.addrRow}>
+          <Text style={s.addrPin}>📍</Text>
+          <Text style={s.addrTxt} numberOfLines={2}>{order.customer_address}</Text>
+        </View>
+      </View>
+
+      {/* ── CHAT MODAL (full screen slide) ── */}
+      <Modal visible={chatOpen} transparent animationType="none" onRequestClose={closeChat}>
+        <View style={s.chatOverlay}>
+          <TouchableOpacity style={s.chatBackdrop} activeOpacity={1} onPress={closeChat} />
+          <Animated.View style={[s.chatSheet, { transform: [{ translateY: chatSlideAnim }] }]}>
+
+            {/* Chat header */}
+            <View style={s.chatHeader}>
+              <View style={s.chatHeaderLeft}>
+                <View style={s.chatAvatar}>
+                  <Text style={s.chatAvatarTxt}>{order.restaurants?.name?.[0]?.toUpperCase() || '🍽'}</Text>
                 </View>
                 <View>
-                  <Text style={styles.chatHeaderTitle}>{order.restaurants?.name || 'Restaurant'}</Text>
-                  <Text style={styles.chatHeaderSubtitle}>Discussion sur votre commande</Text>
+                  <Text style={s.chatTitle}>{order.restaurants?.name || 'Restaurant'}</Text>
+                  <View style={s.chatOnlineRow}>
+                    <View style={s.chatOnlineDot} />
+                    <Text style={s.chatOnlineTxt}>En ligne</Text>
+                  </View>
                 </View>
               </View>
-              <TouchableOpacity onPress={() => setChatOpen(false)} style={styles.chatCloseBtn}>
-                <Text style={styles.chatCloseTxt}>✕</Text>
+              <TouchableOpacity style={s.chatCloseBtn} onPress={closeChat}>
+                <Text style={s.chatCloseTxt}>✕</Text>
               </TouchableOpacity>
             </View>
 
+            {/* Messages */}
             <ScrollView
               ref={chatScrollRef}
-              style={styles.chatMessages}
-              contentContainerStyle={styles.chatMessagesContent}
+              style={s.chatMsgs}
+              contentContainerStyle={s.chatMsgsContent}
               showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
               onContentSizeChange={() => chatScrollRef.current?.scrollToEnd({ animated: false })}
             >
               {messages.length === 0 ? (
-                <View style={styles.chatEmptyBox}>
-                  <View style={styles.chatEmptyIconCircle}>
-                    <Text style={styles.chatEmptyEmoji}>💬</Text>
-                  </View>
-                  <Text style={styles.chatEmptyText}>Aucun message</Text>
-                  <Text style={styles.chatEmptySubText}>Posez une question au restaurant à propos de votre commande</Text>
+                <View style={s.chatEmpty}>
+                  <Text style={s.chatEmptyEmoji}>💬</Text>
+                  <Text style={s.chatEmptyTxt}>Pas encore de messages</Text>
+                  <Text style={s.chatEmptySubTxt}>Pose une question au restaurant sur ta commande</Text>
                 </View>
               ) : (
                 messages.map((msg, i) => {
-                  const isClient = msg.sender === 'client'
+                  const isMe = msg.sender === 'client'
                   const time = new Date(msg.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+                  const showDate = i === 0 || new Date(msg.created_at).toDateString() !== new Date(messages[i-1].created_at).toDateString()
                   return (
-                    <View key={msg.id || i} style={[styles.msgRow, isClient ? styles.msgRowClient : styles.msgRowResto]}>
-                      <View style={[styles.msgBubble, isClient ? styles.msgBubbleClient : styles.msgBubbleResto]}>
-                        <Text style={[styles.msgText, isClient ? styles.msgTextClient : styles.msgTextResto]}>
-                          {msg.message}
-                        </Text>
+                    <View key={msg.id || i}>
+                      {showDate && (
+                        <View style={s.dateSep}>
+                          <View style={s.dateLine} />
+                          <Text style={s.dateTxt}>{new Date(msg.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</Text>
+                          <View style={s.dateLine} />
+                        </View>
+                      )}
+                      <View style={[s.msgRow, isMe ? s.msgRowMe : s.msgRowThem]}>
+                        {!isMe && (
+                          <View style={s.msgAvatar}>
+                            <Text style={s.msgAvatarTxt}>{order.restaurants?.name?.[0]?.toUpperCase() || '🍽'}</Text>
+                          </View>
+                        )}
+                        <View style={[s.msgBubble, isMe ? s.msgBubbleMe : s.msgBubbleThem]}>
+                          <Text style={[s.msgTxt, isMe ? s.msgTxtMe : s.msgTxtThem]}>{msg.message}</Text>
+                          <Text style={[s.msgTime, isMe ? s.msgTimeMe : s.msgTimeThem]}>{time}</Text>
+                        </View>
                       </View>
-                      <Text style={[styles.msgTime, isClient ? styles.msgTimeClient : styles.msgTimeResto]}>
-                        {time}
-                      </Text>
                     </View>
                   )
                 })
               )}
             </ScrollView>
 
-            <View style={styles.chatInputRow}>
-              <TextInput
-                style={styles.chatInput}
-                placeholder="Écrire un message..."
-                placeholderTextColor="#5a5a5a"
-                value={chatInput}
-                onChangeText={setChatInput}
-                onSubmitEditing={sendMessage}
-                returnKeyType="send"
-                multiline={false}
-              />
-              <TouchableOpacity
-                style={[styles.chatSendBtn, (!chatInput.trim() || sendingMsg) && styles.chatSendBtnDisabled]}
-                onPress={sendMessage}
-                disabled={!chatInput.trim() || sendingMsg}
-              >
-                <Text style={styles.chatSendEmoji}>➤</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : (
-          <ScrollView showsVerticalScrollIndicator={false} scrollEnabled={false}>
-            <View style={[styles.statusBanner, { backgroundColor: status.color + '18', borderColor: status.color + '44' }]}>
-              <Text style={styles.statusBannerEmoji}>{status.emoji}</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.statusBannerLabel, { color: status.color }]}>{status.label}</Text>
-                <Text style={styles.statusBannerSub}>
-                  {order.status === 'pending' && t('tracking.pendingSub')}
-                  {order.status === 'preparing' && t('tracking.preparingSub')}
-                  {order.status === 'on_the_way' && `${order.driver_name || t('tracking.onTheWayDefault')} ${t('tracking.onTheWaySub')}`}
-                  {order.status === 'delivered' && t('tracking.deliveredSub')}
-                  {order.status === 'refused' && (order.refusal_reason || t('tracking.refusedSub'))}
-                </Text>
+            {/* Input */}
+            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+              <View style={s.chatInputWrap}>
+                <TextInput
+                  style={s.chatInput}
+                  placeholder="Message..."
+                  placeholderTextColor={GRAY2}
+                  value={chatInput}
+                  onChangeText={setChatInput}
+                  onSubmitEditing={sendMessage}
+                  returnKeyType="send"
+                  multiline
+                  maxLength={500}
+                />
+                <TouchableOpacity
+                  style={[s.chatSendBtn, (!chatInput.trim() || sendingMsg) && s.chatSendBtnOff]}
+                  onPress={sendMessage}
+                  disabled={!chatInput.trim() || sendingMsg}
+                >
+                  <Text style={s.chatSendIcon}>➤</Text>
+                </TouchableOpacity>
               </View>
-            </View>
+            </KeyboardAvoidingView>
 
-            {order.status !== 'refused' && (
-              <View style={styles.stepsRow}>
-                {STEPS.map((step, i) => {
-                  const done = i <= currentStep
-                  const isCurrent = i === currentStep
-                  return (
-                    <View key={step.key} style={styles.stepWrapper}>
-                      {i < STEPS.length - 1 && (
-                        <View style={[styles.stepLine, done && i < currentStep && { backgroundColor: status.color }]} />
-                      )}
-                      <View style={[styles.stepCircle, done && { backgroundColor: status.color + '22', borderColor: status.color }, isCurrent && { borderWidth: 2 }]}>
-                        <Text style={styles.stepEmoji}>{step.emoji}</Text>
-                      </View>
-                      <Text style={[styles.stepLabel, done && { color: status.color }]}>{step.label}</Text>
-                    </View>
-                  )
-                })}
-              </View>
-            )}
+          </Animated.View>
+        </View>
+      </Modal>
 
-            {order.driver_name && !isDelivered && (
-              <View style={styles.driverCard}>
-                <View style={styles.driverAvatar}>
-                  <Text style={styles.driverAvatarTxt}>{order.driver_name[0]?.toUpperCase()}</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.driverLabel}>{t('tracking.yourDriver')}</Text>
-                  <Text style={styles.driverName}>{order.driver_name}</Text>
-                </View>
-                {isOnTheWay && driverLocation && (
-                  <View style={[styles.liveChip, { backgroundColor: '#9C27B022', borderColor: '#9C27B044' }]}>
-                    <View style={[styles.liveDot, { backgroundColor: '#9C27B0' }]} />
-                    <Text style={[styles.liveChipTxt, { color: '#CE93D8' }]}>{t('tracking.gpsLive')}</Text>
-                  </View>
-                )}
-              </View>
-            )}
-
-            <View style={styles.infoRow}>
-              <View style={styles.infoBox}>
-                <Text style={styles.infoLabel}>{t('tracking.restaurant')}</Text>
-                <Text style={styles.infoValue} numberOfLines={1}>{order.restaurants?.name}</Text>
-              </View>
-              <View style={styles.infoBox}>
-                <Text style={styles.infoLabel}>{t('tracking.total')}</Text>
-                <Text style={[styles.infoValue, { color: '#FF6B35' }]}>${order.total}</Text>
-              </View>
-              <View style={styles.infoBox}>
-                <Text style={styles.infoLabel}>{t('tracking.payment')}</Text>
-                <Text style={styles.infoValue}>{order.payment_method === 'whish' ? t('tracking.whishLabel') : t('tracking.cash')}</Text>
-              </View>
-            </View>
-
-            <View style={styles.addrRow}>
-              <Text style={styles.addrEmoji}>📍</Text>
-              <Text style={styles.addrTxt} numberOfLines={2}>{order.customer_address}</Text>
-            </View>
-
-            {showChat && (
-              <TouchableOpacity style={styles.openChatBtn} onPress={openChat} activeOpacity={0.82}>
-                <Text style={styles.openChatBtnText}>
-                  💬 Contacter le restaurant
-                  {unreadCount > 0 ? `  •  ${unreadCount} nouveau${unreadCount > 1 ? 'x' : ''}` : ''}
-                </Text>
-                {unreadCount > 0 && (
-                  <View style={styles.openChatBadge}>
-                    <Text style={styles.openChatBadgeTxt}>{unreadCount}</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            )}
-          </ScrollView>
-        )}
-      </View>
     </KeyboardAvoidingView>
   )
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0d0d0d' },
-  loadingScreen: { flex: 1, backgroundColor: '#0d0d0d', justifyContent: 'center', alignItems: 'center' },
-  loadingTxt: { color: '#555', fontSize: 16 },
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: BG },
+
+  // Loading
+  loadingScreen: { flex: 1, backgroundColor: BG, justifyContent: 'center', alignItems: 'center', gap: 12 },
+  loadingEmoji:  { fontSize: 36 },
+  loadingTxt:    { color: GRAY, fontSize: 15 },
+
+  // Map
   map: { flex: 1 },
-  backBtn: { position: 'absolute', top: 60, left: 20, width: 42, height: 42, borderRadius: 21, backgroundColor: '#141414', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#2a2a2a' },
-  backBtnTxt: { color: '#fff', fontSize: 18, fontWeight: '700' },
-  recenterBtn: { position: 'absolute', top: 110, left: 20, width: 42, height: 42, borderRadius: 21, backgroundColor: '#141414', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#2a2a2a' },
-  recenterBtnTxt: { color: '#fff', fontSize: 20 },
-  chatFab: { position: 'absolute', top: 110, right: 20, width: 48, height: 48, borderRadius: 24, backgroundColor: '#1a2e1a', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#2a4a2a' },
-  chatFabEmoji: { fontSize: 22 },
-  chatFabBadge: { position: 'absolute', top: -4, right: -4, backgroundColor: '#FF6B35', borderRadius: 10, minWidth: 18, height: 18, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 3 },
-  chatFabBadgeTxt: { color: '#fff', fontSize: 10, fontWeight: '700' },
-  markerClient: { backgroundColor: '#FF6B35', borderRadius: 20, padding: 8, borderWidth: 2, borderColor: '#fff' },
-  markerResto: { backgroundColor: '#2196F3', borderRadius: 20, padding: 8, borderWidth: 2, borderColor: '#fff' },
-  markerEmoji: { fontSize: 18 },
-  markerDriverWrapper: { alignItems: 'center', justifyContent: 'center' },
-  markerDriverPulse: { position: 'absolute', width: 50, height: 50, borderRadius: 25, backgroundColor: '#9C27B033' },
-  markerDriver: { backgroundColor: '#9C27B0', borderRadius: 24, padding: 10, borderWidth: 3, borderColor: '#fff' },
+
+  // Map controls
+  backBtn:      { position: 'absolute', top: 60, left: 18, width: 42, height: 42, borderRadius: 21, backgroundColor: '#141414', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: BORDER2 },
+  backBtnTxt:   { color: WHITE, fontSize: 18, fontWeight: '700' },
+  recenterBtn:  { position: 'absolute', top: 110, left: 18, width: 42, height: 42, borderRadius: 21, backgroundColor: '#141414', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: BORDER2 },
+  recenterBtnTxt: { color: WHITE, fontSize: 20 },
+
+  // Chat FAB
+  chatFab:       { position: 'absolute', top: 110, right: 18, width: 50, height: 50, borderRadius: 25, backgroundColor: ORANGE, justifyContent: 'center', alignItems: 'center', shadowColor: ORANGE, shadowOpacity: 0.4, shadowRadius: 10, elevation: 8 },
+  chatFabEmoji:  { fontSize: 22 },
+  chatFabBadge:  { position: 'absolute', top: -3, right: -3, backgroundColor: WHITE, borderRadius: 10, minWidth: 18, height: 18, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 3 },
+  chatFabBadgeTxt: { color: ORANGE, fontSize: 10, fontWeight: '800' },
+
+  // Markers
+  markerClient:      { backgroundColor: ORANGE, borderRadius: 22, padding: 9, borderWidth: 2.5, borderColor: WHITE },
+  markerResto:       { backgroundColor: '#2196F3', borderRadius: 22, padding: 9, borderWidth: 2.5, borderColor: WHITE },
+  markerEmoji:       { fontSize: 18 },
+  markerDriverWrap:  { alignItems: 'center', justifyContent: 'center' },
+  markerDriverPulse: { position: 'absolute', width: 54, height: 54, borderRadius: 27, backgroundColor: PURPLE + '33' },
+  markerDriver:      { backgroundColor: PURPLE, borderRadius: 26, padding: 10, borderWidth: 3, borderColor: WHITE },
   markerDriverEmoji: { fontSize: 20 },
-  sheet: { backgroundColor: '#141414', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 0, paddingBottom: 0, borderTopWidth: 1, borderTopColor: '#2a2a2a' },
-  sheetHandle: { width: 36, height: 4, backgroundColor: '#2a2a2a', borderRadius: 2, alignSelf: 'center', marginBottom: 14 },
-  statusBanner: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 14, borderWidth: 1, marginBottom: 14 },
-  statusBannerEmoji: { fontSize: 28 },
-  statusBannerLabel: { fontWeight: '700', fontSize: 15, marginBottom: 2 },
-  statusBannerSub: { color: '#888', fontSize: 13, lineHeight: 18 },
-  stepsRow: { flexDirection: 'row', marginBottom: 14, position: 'relative' },
-  stepWrapper: { flex: 1, alignItems: 'center', position: 'relative' },
-  stepLine: { position: 'absolute', top: 18, left: '50%', right: '-50%', height: 2, backgroundColor: '#1f1f1f', zIndex: -1 },
-  stepCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#1f1f1f', borderWidth: 1, borderColor: '#2a2a2a', justifyContent: 'center', alignItems: 'center', marginBottom: 4 },
-  stepEmoji: { fontSize: 14 },
-  stepLabel: { color: '#444', fontSize: 10, textAlign: 'center' },
-  driverCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#1a1a1a', borderRadius: 14, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: '#2a2a2a' },
-  driverAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#9C27B022', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#9C27B044' },
-  driverAvatarTxt: { color: '#CE93D8', fontWeight: '700', fontSize: 18 },
-  driverLabel: { color: '#555', fontSize: 11 },
-  driverName: { color: '#fff', fontWeight: '700', fontSize: 15 },
-  liveChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1 },
-  liveDot: { width: 6, height: 6, borderRadius: 3 },
-  liveChipTxt: { fontSize: 12, fontWeight: '600' },
-  infoRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
-  infoBox: { flex: 1, backgroundColor: '#1a1a1a', borderRadius: 10, padding: 10, borderWidth: 1, borderColor: '#2a2a2a' },
-  infoLabel: { color: '#555', fontSize: 10, marginBottom: 3 },
-  infoValue: { color: '#fff', fontWeight: '600', fontSize: 13 },
-  addrRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', marginBottom: 12 },
-  addrEmoji: { fontSize: 14, marginTop: 1 },
-  addrTxt: { flex: 1, color: '#666', fontSize: 13, lineHeight: 18 },
-  openChatBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#0e1a0e', borderRadius: 12, padding: 13, borderWidth: 1, borderColor: '#2a4a2a', marginBottom: 20 },
-  openChatBtnText: { color: '#4a9a6a', fontWeight: '600', fontSize: 14 },
-  openChatBadge: { backgroundColor: '#FF6B35', borderRadius: 10, minWidth: 20, height: 20, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 4 },
-  openChatBadgeTxt: { color: '#fff', fontSize: 11, fontWeight: '700' },
-  chatContainer: { flex: 1 },
-  chatHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 14, marginBottom: 8, borderBottomWidth: 1, borderBottomColor: '#222' },
-  chatHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  chatHeaderAvatar: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#2196F322', borderWidth: 1, borderColor: '#2196F344', justifyContent: 'center', alignItems: 'center' },
-  chatHeaderAvatarTxt: { color: '#7AB8F0', fontWeight: '700', fontSize: 16 },
-  chatHeaderTitle: { color: '#f0f0ec', fontWeight: '700', fontSize: 15 },
-  chatHeaderSubtitle: { color: '#5a5a5a', fontSize: 11, marginTop: 1 },
-  chatCloseBtn: { backgroundColor: '#1a1a1a', borderRadius: 16, width: 32, height: 32, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#2a2a2a' },
-  chatCloseTxt: { color: '#888', fontSize: 14 },
-  chatMessages: { flex: 1, marginBottom: 10 },
-  chatMessagesContent: { paddingVertical: 6, gap: 10 },
-  chatEmptyBox: { alignItems: 'center', paddingVertical: 40 },
-  chatEmptyIconCircle: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#1a1a1a', justifyContent: 'center', alignItems: 'center', marginBottom: 12, borderWidth: 1, borderColor: '#2a2a2a' },
-  chatEmptyEmoji: { fontSize: 24 },
-  chatEmptyText: { color: '#999', fontSize: 15, fontWeight: '600' },
-  chatEmptySubText: { color: '#444', fontSize: 12, marginTop: 4, textAlign: 'center', paddingHorizontal: 40, lineHeight: 17 },
-  msgRow: { flexDirection: 'column', gap: 4, maxWidth: '100%' },
-  msgRowClient: { alignItems: 'flex-end' },
-  msgRowResto: { alignItems: 'flex-start' },
-  msgBubble: { maxWidth: '78%', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10 },
-  msgBubbleClient: { backgroundColor: '#FF6B35', borderBottomRightRadius: 4 },
-  msgBubbleResto: { backgroundColor: '#1e1e22', borderBottomLeftRadius: 4, borderWidth: 1, borderColor: '#2a2a2e' },
-  msgText: { fontSize: 14, lineHeight: 20 },
-  msgTextClient: { color: '#fff' },
-  msgTextResto: { color: '#d4d4d8' },
-  msgTime: { fontSize: 10, color: '#444', marginHorizontal: 4 },
-  msgTimeClient: { textAlign: 'right' },
-  msgTimeResto: { textAlign: 'left' },
-  chatInputRow: { flexDirection: 'row', gap: 8, alignItems: 'center', paddingTop: 12, borderTopWidth: 1, borderTopColor: '#222' },
-  chatInput: { flex: 1, backgroundColor: '#1a1a1a', borderRadius: 22, paddingHorizontal: 16, paddingVertical: 11, color: '#e8e8e4', fontSize: 14, borderWidth: 1, borderColor: '#2a2a2a' },
-  chatSendBtn: { backgroundColor: '#FF6B35', borderRadius: 21, width: 42, height: 42, justifyContent: 'center', alignItems: 'center' },
-  chatSendBtnDisabled: { backgroundColor: '#1a1a1a', opacity: 0.6 },
-  chatSendEmoji: { color: '#fff', fontSize: 16 },
+
+  // Bottom sheet
+  sheet: {
+    backgroundColor: '#111',
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    paddingHorizontal: 18,
+    paddingTop: 0,
+    paddingBottom: 24,
+    borderTopWidth: 1,
+    borderTopColor: BORDER,
+    // Fixed height — no chat inside anymore
+  },
+  sheetHandle: { width: 38, height: 4, backgroundColor: BORDER2, borderRadius: 2, alignSelf: 'center', marginVertical: 14 },
+
+  // Status banner
+  statusBanner: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 16, borderWidth: 1, marginBottom: 16 },
+  statusEmoji:  { fontSize: 26 },
+  statusLabel:  { fontSize: 15, fontWeight: '700', marginBottom: 2 },
+  statusSub:    { color: GRAY, fontSize: 12, lineHeight: 17 },
+  liveChip:     { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: PURPLE + '22', paddingHorizontal: 9, paddingVertical: 5, borderRadius: 8, borderWidth: 1, borderColor: PURPLE + '44' },
+  liveDot:      { width: 6, height: 6, borderRadius: 3, backgroundColor: PURPLE },
+  liveTxt:      { color: '#CE93D8', fontSize: 10, fontWeight: '800', letterSpacing: 0.8 },
+
+  // Steps
+  stepsRow:   { flexDirection: 'row', marginBottom: 14 },
+  stepWrap:   { flex: 1, alignItems: 'center', position: 'relative' },
+  stepLine:   { position: 'absolute', top: 17, left: '50%', right: '-50%', height: 2, zIndex: -1 },
+  stepCircle: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#1a1a1a', borderWidth: 1, borderColor: BORDER2, justifyContent: 'center', alignItems: 'center', marginBottom: 5 },
+  stepEmoji:  { fontSize: 13 },
+  stepLabel:  { fontSize: 9, textAlign: 'center', fontWeight: '600', letterSpacing: 0.3 },
+
+  // Driver card
+  driverCard:       { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#1a1a1a', borderRadius: 14, padding: 13, marginBottom: 12, borderWidth: 1, borderColor: BORDER2 },
+  driverAvatar:     { width: 42, height: 42, borderRadius: 21, backgroundColor: PURPLE + '22', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: PURPLE + '44' },
+  driverAvatarTxt:  { color: '#CE93D8', fontWeight: '700', fontSize: 17 },
+  driverLbl:        { color: GRAY2, fontSize: 10, fontWeight: '600', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 2 },
+  driverName:       { color: WHITE, fontWeight: '700', fontSize: 15 },
+  driverChatBtn:    { width: 42, height: 42, borderRadius: 21, backgroundColor: ORANGE + '18', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: ORANGE + '35' },
+  driverChatEmoji:  { fontSize: 18 },
+  driverChatBadge:  { position: 'absolute', top: -2, right: -2, backgroundColor: ORANGE, borderRadius: 8, minWidth: 16, height: 16, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 2 },
+  driverChatBadgeTxt: { color: WHITE, fontSize: 9, fontWeight: '800' },
+
+  // Info row
+  infoRow:    { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  infoBox:    { flex: 1, backgroundColor: '#1a1a1a', borderRadius: 12, padding: 11, borderWidth: 1, borderColor: BORDER },
+  infoBoxMid: { borderColor: ORANGE + '30', backgroundColor: ORANGE + '08' },
+  infoLbl:    { color: GRAY2, fontSize: 9, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 4 },
+  infoVal:    { color: WHITE, fontWeight: '700', fontSize: 13 },
+
+  // Address
+  addrRow:  { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
+  addrPin:  { fontSize: 14, marginTop: 1 },
+  addrTxt:  { flex: 1, color: GRAY, fontSize: 13, lineHeight: 19 },
+
+  // ── CHAT MODAL ──
+  chatOverlay:  { flex: 1, justifyContent: 'flex-end' },
+  chatBackdrop: { position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)' },
+  chatSheet: {
+    height: SCREEN_H * 0.88,
+    backgroundColor: '#111',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderTopWidth: 1,
+    borderTopColor: BORDER2,
+    overflow: 'hidden',
+  },
+
+  // Chat header
+  chatHeader:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: BORDER, backgroundColor: '#141414' },
+  chatHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  chatAvatar:     { width: 42, height: 42, borderRadius: 21, backgroundColor: '#2196F322', borderWidth: 1, borderColor: '#2196F344', justifyContent: 'center', alignItems: 'center' },
+  chatAvatarTxt:  { color: '#7AB8F0', fontWeight: '700', fontSize: 17 },
+  chatTitle:      { color: WHITE, fontWeight: '700', fontSize: 15 },
+  chatOnlineRow:  { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
+  chatOnlineDot:  { width: 6, height: 6, borderRadius: 3, backgroundColor: '#4CAF50' },
+  chatOnlineTxt:  { color: '#4CAF50', fontSize: 11, fontWeight: '600' },
+  chatCloseBtn:   { width: 34, height: 34, borderRadius: 17, backgroundColor: '#1a1a1a', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: BORDER2 },
+  chatCloseTxt:   { color: GRAY, fontSize: 14 },
+
+  // Messages area
+  chatMsgs:        { flex: 1, backgroundColor: BG },
+  chatMsgsContent: { paddingHorizontal: 16, paddingVertical: 16, gap: 4 },
+
+  // Empty state
+  chatEmpty:       { alignItems: 'center', paddingVertical: 60, gap: 10 },
+  chatEmptyEmoji:  { fontSize: 40 },
+  chatEmptyTxt:    { color: GRAY, fontSize: 16, fontWeight: '600' },
+  chatEmptySubTxt: { color: GRAY2, fontSize: 13, textAlign: 'center', paddingHorizontal: 40, lineHeight: 18 },
+
+  // Date separator
+  dateSep:  { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 12 },
+  dateLine: { flex: 1, height: 1, backgroundColor: BORDER },
+  dateTxt:  { color: GRAY2, fontSize: 11, fontWeight: '500' },
+
+  // Message rows
+  msgRow:       { flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginVertical: 3 },
+  msgRowMe:     { justifyContent: 'flex-end' },
+  msgRowThem:   { justifyContent: 'flex-start' },
+  msgAvatar:    { width: 28, height: 28, borderRadius: 14, backgroundColor: '#2196F322', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#2196F333', marginBottom: 2 },
+  msgAvatarTxt: { color: '#7AB8F0', fontSize: 12, fontWeight: '700' },
+  msgBubble:    { maxWidth: SCREEN_W * 0.72, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10, gap: 4 },
+  msgBubbleMe:  { backgroundColor: ORANGE, borderBottomRightRadius: 4 },
+  msgBubbleThem:{ backgroundColor: '#1e1e1e', borderBottomLeftRadius: 4, borderWidth: 1, borderColor: BORDER2 },
+  msgTxt:       { fontSize: 14, lineHeight: 20 },
+  msgTxtMe:     { color: WHITE },
+  msgTxtThem:   { color: '#d8d8d8' },
+  msgTime:      { fontSize: 10 },
+  msgTimeMe:    { color: 'rgba(255,255,255,0.6)', textAlign: 'right' },
+  msgTimeThem:  { color: GRAY2 },
+
+  // Chat input
+  chatInputWrap: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 14,
+    borderTopWidth: 1,
+    borderTopColor: BORDER,
+    backgroundColor: '#141414',
+  },
+  chatInput:       { flex: 1, backgroundColor: '#1a1a1a', borderRadius: 22, paddingHorizontal: 16, paddingVertical: 11, paddingTop: 11, color: WHITE, fontSize: 14, borderWidth: 1, borderColor: BORDER2, maxHeight: 120 },
+  chatSendBtn:     { width: 44, height: 44, borderRadius: 22, backgroundColor: ORANGE, justifyContent: 'center', alignItems: 'center', shadowColor: ORANGE, shadowOpacity: 0.4, shadowRadius: 8, elevation: 5 },
+  chatSendBtnOff:  { backgroundColor: '#1a1a1a', shadowOpacity: 0, elevation: 0 },
+  chatSendIcon:    { color: WHITE, fontSize: 16 },
 })
 

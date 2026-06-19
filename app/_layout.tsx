@@ -55,7 +55,7 @@ function RootLayoutNav() {
       return
     }
 
-    if (!session && !inAuth && !inDriver && !inLanguage) router.replace('/login')
+    // if (!session && !inAuth && !inDriver && !inLanguage) router.replace('/login')
     if (session && inAuth) router.replace('/(tabs)')
   }, [session, ready, hasLanguage, langLoading, segments])
 

@@ -10,7 +10,6 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0a; color: #e8e8e4; min-height: 100vh; font-size: 14px; }
 
-    /* ── Topbar ── */
     .topbar { background: #111110; border-bottom: 0.5px solid #2a2a28; padding: 0 28px; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
     .brand { font-size: 15px; font-weight: 500; color: #e8e8e4; letter-spacing: -0.2px; }
     .brand span { color: #c97848; }
@@ -23,7 +22,6 @@
     .btn-logout { background: transparent; border: 0.5px solid #3a2a28; color: #9a6a5a; padding: 7px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; transition: background .15s; font-family: inherit; }
     .btn-logout:hover { background: #2a1a18; }
 
-    /* ── Login ── */
     .login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
     .login-box { background: #111110; border-radius: 16px; padding: 40px; width: 100%; max-width: 380px; border: 0.5px solid #2a2a28; }
     .login-logo { font-size: 28px; font-weight: 500; color: #e8e8e4; margin-bottom: 4px; letter-spacing: -1px; }
@@ -37,7 +35,6 @@
     .btn-primary:hover { background: #b86a38; }
     .login-hint { font-size: 12px; color: #3a3a38; margin-top: 14px; text-align: center; }
 
-    /* ── Layout ── */
     .layout { display: grid; grid-template-columns: 200px 1fr; min-height: calc(100vh - 56px); }
     .sidebar { background: #0e0e0d; border-right: 0.5px solid #2a2a28; padding: 20px 0; }
     .sidebar-section { padding: 0 12px; margin-bottom: 24px; }
@@ -53,7 +50,6 @@
     .page { display: none; }
     .page.active { display: block; }
 
-    /* ── Page header ── */
     .page-header { margin-bottom: 24px; display: flex; align-items: flex-start; justify-content: space-between; }
     .page-title { font-size: 20px; font-weight: 500; color: #e8e8e4; letter-spacing: -0.3px; }
     .page-sub { font-size: 13px; color: #5a5a57; margin-top: 3px; }
@@ -61,7 +57,6 @@
     .btn-add:hover { background: #b86a38; }
     .btn-add i { font-size: 15px; }
 
-    /* ── Stats ── */
     .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
     .stat { background: #111110; border: 0.5px solid #2a2a28; border-radius: 10px; padding: 16px 18px; }
     .stat.hi-orange { border-color: #3a2818; background: #130f0a; }
@@ -77,7 +72,6 @@
     .c-red    { color: #c05a5a; }
     .c-muted  { color: #5a5a57; }
 
-    /* ── Toolbar ── */
     .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
     .search-wrap { position: relative; flex: 1; max-width: 300px; }
     .search-wrap i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #4a4a47; font-size: 14px; pointer-events: none; }
@@ -86,7 +80,6 @@
     .filter-select { background: #111110; border: 0.5px solid #2a2a28; border-radius: 8px; color: #8a8a86; padding: 9px 12px; font-size: 13px; outline: none; cursor: pointer; margin-bottom: 0; width: auto; }
     .filter-select:focus { border-color: #c97848; }
 
-    /* ── Resto cards grid ── */
     .restos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
     .resto-card { background: #111110; border: 0.5px solid #2a2a28; border-radius: 14px; overflow: hidden; transition: border-color .15s; }
     .resto-card:hover { border-color: #3a3a38; }
@@ -109,7 +102,7 @@
     .rc-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
     .rc-meta-pill { background: #1a1a18; border: 0.5px solid #2a2a28; border-radius: 6px; padding: 3px 8px; font-size: 11px; color: #6a6a67; display: flex; align-items: center; gap: 4px; }
     .rc-meta-pill i { font-size: 12px; }
-    .rc-footer { display: flex; gap: 6px; padding: 10px 16px 14px; border-top: 0.5px solid #1a1a18; }
+    .rc-footer { display: flex; gap: 6px; padding: 10px 16px 14px; border-top: 0.5px solid #1a1a18; flex-wrap: wrap; }
     .rc-edit-btn { flex: 1; background: #1a1a18; border: 0.5px solid #2a2a28; color: #8a8a86; padding: 7px 0; border-radius: 7px; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 5px; transition: all .15s; font-family: inherit; }
     .rc-edit-btn:hover { border-color: #c97848; color: #c97848; background: #1e1a14; }
     .rc-open-btn { background: #0e1e0e; border: 0.5px solid #1a3a1a; color: #4a9a4a; padding: 7px 12px; border-radius: 7px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 4px; transition: all .15s; font-family: inherit; }
@@ -118,13 +111,28 @@
     .rc-del-btn { background: #1a0e0e; border: 0.5px solid #2a1818; color: #8a4a4a; padding: 7px 10px; border-radius: 7px; cursor: pointer; font-size: 12px; display: flex; align-items: center; transition: all .15s; font-family: inherit; }
     .rc-del-btn:hover { border-color: #c05a5a; color: #c05a5a; background: #2a0e0e; }
     .rc-del-btn i { font-size: 14px; }
+    .rc-commission-pill { background: #1a1a3a; border: 0.5px solid #2a2a5a; border-radius: 6px; padding: 3px 8px; font-size: 11px; color: #8a78cf; display: flex; align-items: center; gap: 4px; }
 
-    /* ── Section header ── */
+    /* ── ACCESS BUTTON ── */
+    .rc-access-btn {
+      width: 100%;
+      background: #0e1a2e; border: 0.5px solid #1e3a5a; color: #4a8abf;
+      padding: 8px 0; border-radius: 7px; cursor: pointer; font-size: 12px;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      transition: all .15s; font-family: inherit; margin-top: 2px;
+    }
+    .rc-access-btn:hover { border-color: #4a8abf; color: #6aaad8; background: #0e2030; }
+    .rc-access-btn i { font-size: 13px; }
+    .rc-email-pill {
+      display: flex; align-items: center; gap: 5px;
+      background: #0e1a2e; border: 0.5px solid #1e3a5a;
+      border-radius: 6px; padding: 3px 8px; font-size: 11px; color: #4a7a9a;
+    }
+
     .section-header { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
     .section-title { font-size: 13px; font-weight: 500; color: #5a5a57; }
     .section-count { background: #1e1e1c; border: 0.5px solid #2a2a28; color: #6a6a67; font-size: 11px; padding: 2px 7px; border-radius: 10px; }
 
-    /* ── Orders table (overview) ── */
     .orders-table-wrap { background: #111110; border: 0.5px solid #2a2a28; border-radius: 12px; overflow: hidden; }
     .orders-table { width: 100%; border-collapse: collapse; }
     .orders-table th { background: #0e0e0d; padding: 10px 16px; text-align: left; font-size: 11px; color: #4a4a47; font-weight: 500; letter-spacing: 0.3px; text-transform: uppercase; border-bottom: 0.5px solid #1e1e1c; }
@@ -139,7 +147,7 @@
     .s-refused   { background: #2a0e0e; color: #c05a5a; border: 0.5px solid #3a1818; }
     .resto-tag { background: #1e1a14; border: 0.5px solid #3a2818; color: #c97848; font-size: 11px; padding: 2px 8px; border-radius: 5px; font-weight: 500; }
 
-    /* ── Modals ── */
+    /* ── MODALS ── */
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 999; align-items: center; justify-content: center; padding: 20px; }
     .modal-overlay.open { display: flex; }
     .modal { background: #111110; border-radius: 14px; padding: 28px; width: 100%; max-width: 540px; border: 0.5px solid #2a2a28; max-height: 90vh; overflow-y: auto; }
@@ -172,7 +180,11 @@
     .toggle-switch input:checked + .toggle-slider { background: #1a3a1a; }
     .toggle-switch input:checked + .toggle-slider:before { transform: translateX(18px); background: #4a9a4a; }
 
-    /* ── Delete confirm modal ── */
+    .commission-wrap { position: relative; }
+    .commission-wrap input { padding-right: 36px; }
+    .commission-suffix { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: #8a78cf; font-size: 14px; font-weight: 600; pointer-events: none; }
+    .commission-hint { font-size: 11px; color: #4a4a47; margin-top: 6px; }
+
     .delete-modal-body { background: #1a0808; border: 0.5px solid #3a1818; border-radius: 10px; padding: 16px; margin-bottom: 6px; display: flex; align-items: center; gap: 12px; }
     .delete-modal-icon { font-size: 24px; color: #c05a5a; flex-shrink: 0; }
     .delete-modal-name { font-size: 15px; font-weight: 600; color: #e8e8e4; }
@@ -180,30 +192,64 @@
     .act-refuse { background: #2a0e0e; border: 0.5px solid #3a1818; color: #c05a5a; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 6px; flex: 1; font-family: inherit; transition: background .15s; }
     .act-refuse:hover { background: #3a0e0e; }
 
-    /* ── Info box ── */
     .info-box { background: #0e1a28; border: 0.5px solid #1e3040; border-radius: 10px; padding: 14px 16px; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 10px; }
     .info-box i { color: #4a8abf; font-size: 16px; flex-shrink: 0; margin-top: 1px; }
     .info-box-text { font-size: 12px; color: #4a7a9a; line-height: 1.55; }
     .info-box-text strong { color: #6a9abf; }
 
-    /* ── Password badge field ── */
-    .password-row { display: flex; align-items: center; gap: 8px; background: #0e0e0d; border: 0.5px solid #2a2a28; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; }
-    .password-val { font-family: monospace; font-size: 16px; color: #c97848; letter-spacing: 2px; flex: 1; }
-    .password-hint { font-size: 11px; color: #4a4a47; }
+    /* ── MODAL ACCÈS DASHBOARD ── */
+    .access-modal .modal { max-width: 480px; }
+    .access-step { background: #0e0e0d; border: 0.5px solid #2a2a28; border-radius: 10px; padding: 16px; margin-bottom: 12px; }
+    .access-step-num { font-size: 10px; font-weight: 700; color: #4a4a47; letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 8px; }
+    .access-step-title { font-size: 13px; font-weight: 600; color: #c8c8c4; margin-bottom: 6px; }
+    .access-step-desc { font-size: 12px; color: #5a5a57; line-height: 1.5; }
 
-    /* ── Empty ── */
+    /* Email input dans modal accès */
+    .email-input-row { display: flex; gap: 8px; margin-top: 10px; }
+    .email-input-row input { flex: 1; margin-bottom: 0; }
+    .btn-generate { background: #c97848; border: none; color: #1a0e08; padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background .15s; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+    .btn-generate:hover { background: #b86a38; }
+    .btn-generate:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Zone lien généré */
+    .link-result { display: none; margin-top: 14px; }
+    .link-result.visible { display: block; }
+    .link-box { background: #0a1a0a; border: 0.5px solid #1a4a1a; border-radius: 10px; padding: 14px; }
+    .link-box-title { font-size: 11px; font-weight: 700; color: #4a9a4a; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .link-text { font-family: monospace; font-size: 11px; color: #6aba6a; word-break: break-all; line-height: 1.6; background: #061206; border: 0.5px solid #1a3a1a; border-radius: 7px; padding: 10px 12px; margin-bottom: 10px; }
+    .link-expires { font-size: 11px; color: #4a6a4a; margin-bottom: 10px; display: flex; align-items: center; gap: 5px; }
+    .link-actions { display: flex; gap: 8px; }
+    .btn-copy { flex: 1; background: #1a3a1a; border: 0.5px solid #2a5a2a; color: #4a9a4a; padding: 9px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; font-family: inherit; transition: all .15s; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .btn-copy:hover { background: #2a4a2a; }
+    .btn-copy.copied { background: #0a2a0a; color: #2a7a2a; }
+    .btn-whatsapp { background: #1a3a1a; border: 0.5px solid #2a5a2a; color: #4a9a4a; padding: 9px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; font-family: inherit; transition: all .15s; display: flex; align-items: center; gap: 6px; text-decoration: none; }
+    .btn-whatsapp:hover { background: #2a5a2a; }
+
+    /* Email déjà défini */
+    .existing-email-box { background: #0e1a28; border: 0.5px solid #1e3040; border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .existing-email-val { font-size: 13px; color: #6a9abf; font-weight: 500; }
+    .btn-change-email { background: transparent; border: 0.5px solid #2a3a4a; color: #4a6a8a; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 11px; font-family: inherit; transition: all .15s; }
+    .btn-change-email:hover { border-color: #4a8abf; color: #4a8abf; }
+
+    /* Config key manquante */
+    .key-warning { background: #2a1a0a; border: 0.5px solid #4a3a1a; border-radius: 10px; padding: 14px 16px; display: flex; align-items: flex-start; gap: 10px; margin-bottom: 16px; }
+    .key-warning i { color: #c97848; font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+    .key-warning-text { font-size: 12px; color: #9a7a4a; line-height: 1.55; }
+    .key-warning-text strong { color: #c97848; }
+    .key-input-row { display: flex; gap: 8px; margin-top: 8px; }
+    .key-input-row input { flex: 1; margin-bottom: 0; font-family: monospace; font-size: 12px; }
+    .btn-save-key { background: #c97848; border: none; color: #1a0e08; padding: 10px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap; }
+
     .empty { text-align: center; padding: 60px 0; color: #3a3a38; }
     .empty i { font-size: 36px; margin-bottom: 12px; display: block; }
     .empty p { font-size: 14px; }
     .empty small { font-size: 12px; color: #2a2a28; display: block; margin-top: 6px; }
 
-    /* ── Toast ── */
     .toast { position: fixed; bottom: 28px; right: 28px; background: #1e1e1c; border: 0.5px solid #3a3a38; border-radius: 10px; padding: 12px 18px; font-size: 13px; color: #e8e8e4; z-index: 9999; display: flex; align-items: center; gap: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); transform: translateY(20px); opacity: 0; transition: all .25s; pointer-events: none; }
     .toast.show { transform: translateY(0); opacity: 1; }
     .toast.success i { color: #4a9a6a; }
     .toast.error   i { color: #c05a5a; }
 
-    /* ── Realtime badge ── */
     .live-pill { display: flex; align-items: center; gap: 6px; background: #1a2e1a; border: 0.5px solid #2a4a2a; border-radius: 20px; padding: 4px 10px; }
     .live-dot { width: 6px; height: 6px; background: #4a9a4a; border-radius: 50%; animation: blink 2s infinite; }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
@@ -221,6 +267,74 @@
 <body>
 
 <div class="toast" id="toast"><i class="ti ti-check"></i><span id="toast-msg"></span></div>
+
+<!-- ══ MODAL: Accès Dashboard Resto ══ -->
+<div class="modal-overlay access-modal" id="access-modal">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-title">🔑 Accès dashboard</div>
+    <div class="modal-sub" id="access-modal-sub">Génère un lien de connexion pour ce restaurant</div>
+
+    <!-- Avertissement si service key pas configurée -->
+    <div class="key-warning" id="key-warning" style="display:none;">
+      <i class="ti ti-alert-triangle"></i>
+      <div class="key-warning-text">
+        <strong>Service Role Key manquante</strong><br>
+        Pour générer des liens, colle ta <strong>service_role key</strong> Supabase ci-dessous.<br>
+        Elle se trouve dans : Settings → API → service_role.<br>
+        Elle reste stockée uniquement dans ce navigateur.
+        <div class="key-input-row">
+          <input type="password" id="service-key-input" placeholder="eyJ..." />
+          <button class="btn-save-key" onclick="saveServiceKey()">Enregistrer</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Email du resto -->
+    <div class="access-step" id="step-email">
+      <div class="access-step-num">Étape 1 — Email du restaurant</div>
+      <div class="access-step-title">Email de connexion</div>
+      <div class="access-step-desc">C'est l'email que le gérant utilisera pour se connecter. Il n'a pas besoin d'y accéder — tu lui envoies le lien toi-même.</div>
+
+      <div id="existing-email-zone" style="display:none;">
+        <div class="existing-email-box">
+          <span class="existing-email-val" id="existing-email-val">—</span>
+          <button class="btn-change-email" onclick="allowChangeEmail()">Changer</button>
+        </div>
+      </div>
+      <div id="new-email-zone">
+        <div class="email-input-row">
+          <input type="email" id="access-email-input" placeholder="ex: burgerhouse@restodash.app" />
+          <button class="btn-generate" onclick="generateLink()" id="btn-generate">
+            <i class="ti ti-link"></i> Générer le lien
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lien généré -->
+    <div class="link-result" id="link-result">
+      <div class="link-box">
+        <div class="link-box-title"><i class="ti ti-circle-check" style="font-size:13px;"></i> Lien prêt à envoyer</div>
+        <div class="link-text" id="link-text-display">—</div>
+        <div class="link-expires"><i class="ti ti-clock" style="font-size:12px;"></i> Expire dans 1 heure — génère un nouveau si besoin</div>
+        <div class="link-actions">
+          <button class="btn-copy" onclick="copyLink()" id="btn-copy"><i class="ti ti-copy"></i> Copier le lien</button>
+          <a class="btn-whatsapp" id="btn-whatsapp" href="#" target="_blank"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="access-step" style="margin-top:12px;">
+      <div class="access-step-num">Étape 2 — Envoyer au gérant</div>
+      <div class="access-step-title">Envoie-lui le lien</div>
+      <div class="access-step-desc">Par WhatsApp, SMS, Telegram... Le gérant clique dessus et il est directement connecté à son dashboard. <strong style="color:#c8c8c4;">Pas de mot de passe à retenir.</strong></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('access-modal')">Fermer</button>
+    </div>
+  </div>
+</div>
 
 <!-- Modal: Ajouter / Modifier resto -->
 <div class="modal-overlay" id="resto-modal">
@@ -264,6 +378,18 @@
         <input type="number" id="r-delivery-fee" placeholder="0" min="0" step="0.5" />
       </div>
     </div>
+
+    <hr class="modal-divider">
+    <div class="modal-field">
+      <label>Commission plateforme (%)</label>
+      <div class="commission-wrap">
+        <input type="number" id="r-commission" placeholder="5" min="0" max="100" step="0.5" value="5" />
+        <span class="commission-suffix">%</span>
+      </div>
+      <div class="commission-hint">Taux de commission prélevé sur les commandes livrées.</div>
+    </div>
+    <hr class="modal-divider">
+
     <div class="modal-field">
       <label>URL de l'image principale</label>
       <input type="url" id="r-image" placeholder="https://..." oninput="previewRestoImg()" />
@@ -279,7 +405,6 @@
     </div>
 
     <hr class="modal-divider">
-
     <div class="modal-avail-row">
       <div class="modal-avail-label">
         Ouvert maintenant
@@ -289,20 +414,6 @@
         <input type="checkbox" id="r-is-open" checked />
         <span class="toggle-slider"></span>
       </label>
-    </div>
-
-    <hr class="modal-divider">
-
-    <div style="margin-bottom:6px;">
-      <label>Mot de passe du dashboard resto</label>
-      <div class="info-box" style="margin-bottom:10px;">
-        <i class="ti ti-info-circle"></i>
-        <div class="info-box-text">C'est le mot de passe que le restaurant utilise pour se connecter à <strong>Resto.dash</strong>. Tous les restos partagent actuellement le même mot de passe global défini dans le code.</div>
-      </div>
-      <div class="password-row">
-        <span class="password-val" id="current-pwd-display">••••</span>
-        <span class="password-hint">Mot de passe global actuel</span>
-      </div>
     </div>
 
     <div class="modal-actions">
@@ -360,7 +471,16 @@
       </div>
       <div class="live-pill"><div class="live-dot"></div><div class="live-text">LIVE</div></div>
     </div>
+
+
+
+
+
+    
     <div class="topbar-right">
+      <button onclick="localStorage.removeItem('sb_service_key');location.reload()" style="background:transparent;border:0.5px solid #3a2818;color:#9a6a5a;padding:7px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-family:inherit;">
+  🔑 Réinitialiser clé API
+</button>
       <button class="btn-logout" onclick="adminLogout()">Déconnexion</button>
     </div>
   </div>
@@ -398,13 +518,6 @@
           <button class="btn-add" onclick="openAddResto()">
             <i class="ti ti-plus"></i> Ajouter un restaurant
           </button>
-        </div>
-
-        <div class="info-box" style="margin-bottom:24px;">
-          <i class="ti ti-info-circle"></i>
-          <div class="info-box-text">
-            Quand tu ajoutes un restaurant ici, il apparaît <strong>immédiatement</strong> dans l'app mobile et dans le dashboard des restos. Le restaurant peut ensuite se connecter avec son nom et le mot de passe global pour gérer son menu.
-          </div>
         </div>
 
         <div class="toolbar">
@@ -445,14 +558,12 @@
             <div class="page-sub">Vue globale de toutes les commandes de la plateforme</div>
           </div>
         </div>
-
         <div class="stats-row" style="margin-bottom:24px;">
           <div class="stat hi-orange"><div class="stat-label"><i class="ti ti-clock"></i> En attente</div><div class="stat-value c-orange" id="all-pending">0</div></div>
           <div class="stat"><div class="stat-label"><i class="ti ti-tools-kitchen-2"></i> En préparation</div><div class="stat-value" style="color:#4a8abf" id="all-preparing">0</div></div>
           <div class="stat hi-green"><div class="stat-label"><i class="ti ti-check"></i> Livrées</div><div class="stat-value c-green" id="all-delivered">0</div></div>
           <div class="stat hi-purple"><div class="stat-label"><i class="ti ti-currency-dollar"></i> CA total</div><div class="stat-value c-purple" id="all-revenue">$0</div></div>
         </div>
-
         <div class="toolbar">
           <div class="search-wrap">
             <i class="ti ti-search"></i>
@@ -470,7 +581,6 @@
             <option value="all">Tous les restos</option>
           </select>
         </div>
-
         <div class="section-header">
           <div class="section-title">Commandes</div>
           <div class="section-count" id="orders-count">0</div>
@@ -479,12 +589,7 @@
           <table class="orders-table">
             <thead>
               <tr>
-                <th>Client</th>
-                <th>Restaurant</th>
-                <th>Montant</th>
-                <th>Paiement</th>
-                <th>Statut</th>
-                <th>Date</th>
+                <th>Client</th><th>Restaurant</th><th>Montant</th><th>Paiement</th><th>Statut</th><th>Date</th>
               </tr>
             </thead>
             <tbody id="orders-tbody">
@@ -509,18 +614,17 @@
           <div class="stat"><div class="stat-label"><i class="ti ti-currency-dollar"></i> CA plateforme</div><div class="stat-value c-orange" id="stat-total-revenue">$0</div><div class="stat-sub">commandes livrées</div></div>
         </div>
         <div class="stats-row" style="grid-template-columns:repeat(3,1fr);">
-          <div class="stat"><div class="stat-label"><i class="ti ti-percentage"></i> Commission (5%)</div><div class="stat-value c-muted" id="stat-commission">$0</div><div class="stat-sub">à percevoir</div></div>
+          <div class="stat"><div class="stat-label"><i class="ti ti-percentage"></i> Commission totale</div><div class="stat-value c-muted" id="stat-commission">$0</div><div class="stat-sub">taux individuels par resto</div></div>
           <div class="stat"><div class="stat-label"><i class="ti ti-tools-kitchen-2"></i> Articles menu</div><div class="stat-value" id="stat-menu-items">0</div><div class="stat-sub">au total</div></div>
           <div class="stat hi-green"><div class="stat-label"><i class="ti ti-check"></i> Livrées aujourd'hui</div><div class="stat-value c-green" id="stat-today-delivered">0</div><div class="stat-sub">aujourd'hui</div></div>
         </div>
-
         <div class="section-header" style="margin-top:8px;">
           <div class="section-title">Top restaurants — CA</div>
         </div>
         <div class="orders-table-wrap">
           <table class="orders-table">
             <thead>
-              <tr><th>Restaurant</th><th>Catégorie</th><th>Commandes livrées</th><th>CA généré</th><th>Commission</th><th>Statut</th></tr>
+              <tr><th>Restaurant</th><th>Catégorie</th><th>Commandes livrées</th><th>CA généré</th><th>Commission (%)</th><th>Ma commission ($)</th><th>Statut</th></tr>
             </thead>
             <tbody id="stats-tbody"></tbody>
           </table>
@@ -537,16 +641,48 @@
   const { createClient } = supabase
   const db = createClient(SUPABASE_URL, SUPABASE_KEY)
 
-  // ── Mot de passe admin (CHANGE-LE !) ──
+  // ⚠️ Remplace par ton vrai mot de passe admin
   const ADMIN_PASSWORD = '1234'
-  // ── Mot de passe global partagé par les restos dans Resto.dash ──
-  const RESTO_DASH_PASSWORD = '1234'
+  const DEFAULT_COMMISSION = 5
 
-  let allRestos = [], allOrders = [], allMenuItems = []
-  let editingRestoId = null, deletingRestoId = null
+  // URL du dashboard resto — remplace par ton vrai domaine
+  const DASH_URL = 'http://127.0.0.1:5500/lebanon-food-app/dashboard.html'
+
+  let allRestos = [], allOrders = []
+  let editingRestoId = null, deletingRestoId = null, accessRestoId = null
   let realtimeChannel = null
+  let generatedLink = ''
 
-  /* ── Toast ── */
+
+
+
+
+
+ /* ── SERVICE KEY (stockée dans localStorage, jamais envoyée nulle part) ── */
+function getServiceKey() { return localStorage.getItem('sb_service_key') || '' }
+function saveServiceKey() {
+  const key = document.getElementById('service-key-input').value.trim()
+  if (!key || key.length < 20) { showToast('Clé trop courte', 'error'); return }
+  localStorage.setItem('sb_service_key', key)
+  document.getElementById('key-warning').style.display = 'none'
+  showToast('Clé enregistrée ✓')
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  /* ── TOAST ── */
   function showToast(msg, type = 'success') {
     const el = document.getElementById('toast')
     el.querySelector('i').className = type === 'success' ? 'ti ti-check' : 'ti ti-alert-circle'
@@ -555,7 +691,7 @@
     el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 3200)
   }
 
-  /* ── Auth admin ── */
+  /* ── AUTH ADMIN ── */
   function adminLogin() {
     const pwd = document.getElementById('admin-pwd').value
     if (pwd !== ADMIN_PASSWORD) {
@@ -565,10 +701,8 @@
     }
     document.getElementById('login-screen').style.display = 'none'
     document.getElementById('app-screen').style.display = 'block'
-    document.getElementById('current-pwd-display').textContent = RESTO_DASH_PASSWORD
     startAdmin()
   }
-
   function adminLogout() {
     if (realtimeChannel) db.removeChannel(realtimeChannel)
     document.getElementById('app-screen').style.display = 'none'
@@ -576,7 +710,7 @@
     document.getElementById('admin-pwd').value = ''
   }
 
-  /* ── Navigation ── */
+  /* ── NAVIGATION ── */
   function showPage(page, navEl) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'))
     document.getElementById('page-' + page).classList.add('active')
@@ -586,7 +720,7 @@
     if (page === 'orders') renderOrders()
   }
 
-  /* ── Start ── */
+  /* ── INIT ── */
   async function startAdmin() {
     await Promise.all([fetchRestos(), fetchOrders(), fetchMenuItems()])
     subscribeRealtime()
@@ -599,7 +733,6 @@
       const n = document.getElementById('nav-restos-count')
       n.textContent = data.length; n.style.display = data.length > 0 ? '' : 'none'
       document.getElementById('restos-sub').textContent = `${data.length} restaurant${data.length > 1 ? 's' : ''} sur la plateforme`
-      // Populate orders filter
       const sel = document.getElementById('orders-resto-filter')
       sel.innerHTML = '<option value="all">Tous les restos</option>'
       data.forEach(r => sel.innerHTML += `<option value="${r.id}">${r.name}</option>`)
@@ -614,28 +747,126 @@
       const active = data.filter(o => o.status !== 'delivered' && o.status !== 'refused').length
       const n = document.getElementById('nav-orders-count')
       n.textContent = active; n.style.display = active > 0 ? '' : 'none'
-      renderOrders()
-      updateGlobalStats()
+      renderOrders(); updateGlobalStats()
     }
   }
 
   async function fetchMenuItems() {
-    const { data } = await db.from('menu_items').select('id').count()
+    const { data } = await db.from('menu_items').select('id')
     if (data) document.getElementById('stat-menu-items').textContent = data.length || 0
   }
 
   function subscribeRealtime() {
-    realtimeChannel = db.channel(`admin-realtime-${Date.now()}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'restaurants' }, async () => {
-        await fetchRestos(); updateGlobalStats()
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, async () => {
-        await fetchOrders(); updateGlobalStats()
-      })
+    realtimeChannel = db.channel(`admin-rt-${Date.now()}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'restaurants' }, async () => { await fetchRestos(); updateGlobalStats() })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, async () => { await fetchOrders(); updateGlobalStats() })
       .subscribe()
   }
 
-  /* ── Render restos ── */
+  function getCommissionRate(resto) {
+    const rate = parseFloat(resto.commission_rate)
+    return isNaN(rate) ? DEFAULT_COMMISSION : rate
+  }
+
+  /* ══════════════════════════════════
+     MAGIC LINK — GÉNÉRATION
+  ══════════════════════════════════ */
+  function openAccessModal(restoId) {
+    accessRestoId = restoId
+    const resto = allRestos.find(r => r.id === restoId)
+    if (!resto) return
+
+    document.getElementById('access-modal-sub').textContent = `Accès pour : ${resto.name}`
+    document.getElementById('link-result').classList.remove('visible')
+    generatedLink = ''
+
+    // Vérifier si service key disponible
+    const hasKey = !!getServiceKey()
+    document.getElementById('key-warning').style.display = hasKey ? 'none' : 'flex'
+
+    // Email déjà défini ?
+    if (resto.email) {
+      document.getElementById('existing-email-val').textContent = resto.email
+      document.getElementById('existing-email-zone').style.display = 'block'
+      document.getElementById('new-email-zone').style.display = 'none'
+      document.getElementById('access-email-input').value = resto.email
+    } else {
+      document.getElementById('existing-email-zone').style.display = 'none'
+      document.getElementById('new-email-zone').style.display = 'block'
+      document.getElementById('access-email-input').value = ''
+    }
+
+    document.getElementById('access-modal').classList.add('open')
+  }
+
+  function allowChangeEmail() {
+    document.getElementById('existing-email-zone').style.display = 'none'
+    document.getElementById('new-email-zone').style.display = 'block'
+    document.getElementById('access-email-input').value = ''
+    document.getElementById('link-result').classList.remove('visible')
+  }
+
+
+
+ async function generateLink() {
+    const email = document.getElementById('access-email-input').value.trim()
+    if (!email || !email.includes('@')) {
+      showToast('Email invalide', 'error'); return
+    }
+
+    const btn = document.getElementById('btn-generate')
+    btn.disabled = true
+    btn.innerHTML = '<i class="ti ti-loader"></i> Génération...'
+
+    try {
+      const { data: fnData, error: fnError } = await db.functions.invoke('quick-handler', {
+        body: { email, redirectTo: DASH_URL }
+      })
+      if (fnError || fnData?.error) throw new Error(fnData?.error || fnError?.message)
+      const link = fnData.link
+      if (!link) throw new Error('Lien non généré')
+
+      generatedLink = link
+
+      const updatePayload = { email, auth_user_id: fnData.user_id }
+      await db.from('restaurants').update(updatePayload).eq('id', accessRestoId)
+      await fetchRestos()
+
+
+      // Affiche le lien
+      document.getElementById('link-text-display').textContent = link
+      document.getElementById('link-result').classList.add('visible')
+
+      // Lien WhatsApp
+      const resto = allRestos.find(r => r.id === accessRestoId)
+      const waMsg = encodeURIComponent(`Bonjour ${resto?.name} 👋\n\nVoici votre lien de connexion à votre dashboard Resto.dash :\n\n${link}\n\n⚠️ Ce lien expire dans 1 heure. Si besoin, demandez-en un nouveau.`)
+      document.getElementById('btn-whatsapp').href = `https://wa.me/?text=${waMsg}`
+
+      showToast('Lien généré ✓')
+
+    } catch (err) {
+      console.error(err)
+      showToast('Erreur : ' + (err.message || 'Vérife ta service key'), 'error')
+    }
+
+    btn.disabled = false
+    btn.innerHTML = '<i class="ti ti-link"></i> Générer le lien'
+  }
+
+  function copyLink() {
+    if (!generatedLink) return
+    navigator.clipboard.writeText(generatedLink).then(() => {
+      const btn = document.getElementById('btn-copy')
+      btn.classList.add('copied')
+      btn.innerHTML = '<i class="ti ti-check"></i> Copié !'
+      setTimeout(() => {
+        btn.classList.remove('copied')
+        btn.innerHTML = '<i class="ti ti-copy"></i> Copier le lien'
+      }, 2000)
+    })
+  }
+
+  /* ── RENDER RESTOS ── */
   function renderRestos() {
     const search = (document.getElementById('restos-search').value || '').toLowerCase()
     const catFilter = document.getElementById('restos-cat-filter').value
@@ -658,11 +889,19 @@
 
     container.innerHTML = restos.map(r => {
       const isOpen = r.is_open !== false
+      const commRate = getCommissionRate(r)
       const imgBlock = r.image_url
         ? `<img class="rc-img" src="${r.image_url}" alt="${r.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><div class="rc-img-placeholder" style="display:none;"><i class="ti ti-photo-off"></i></div>`
         : `<div class="rc-img-placeholder"><i class="ti ti-building-store"></i></div>`
       const orderCount = allOrders.filter(o => o.restaurant_id === r.id).length
       const revenue = allOrders.filter(o => o.restaurant_id === r.id && o.status === 'delivered').reduce((s,o) => s + Number(o.total || 0), 0)
+      const commission = revenue * commRate / 100
+
+      // Badge email/accès
+      const emailBadge = r.email
+        ? `<div class="rc-email-pill"><i class="ti ti-mail" style="font-size:11px;"></i> ${r.email}</div>`
+        : `<div class="rc-email-pill" style="border-color:#3a2818;background:#130f0a;color:#6a4a2a;"><i class="ti ti-mail-off" style="font-size:11px;"></i> Pas d'accès</div>`
+
       return `
         <div class="resto-card ${isOpen ? '' : 'is-closed'}" id="rc-${r.id}">
           <div class="rc-img-wrap">
@@ -683,9 +922,10 @@
             <div class="rc-desc">${r.description || '<span style="color:#3a3a38;font-style:italic;">Pas de description</span>'}</div>
             <div class="rc-meta">
               ${r.delivery_time ? `<div class="rc-meta-pill"><i class="ti ti-clock"></i> ${r.delivery_time}</div>` : ''}
-              ${r.min_order ? `<div class="rc-meta-pill"><i class="ti ti-currency-dollar"></i> Min $${r.min_order}</div>` : ''}
               <div class="rc-meta-pill"><i class="ti ti-layout-list"></i> ${orderCount} cmd</div>
               <div class="rc-meta-pill" style="color:#4a9a6a;border-color:#1a3a1a;background:#0a1a0a;"><i class="ti ti-currency-dollar"></i> $${revenue.toFixed(0)}</div>
+              <div class="rc-commission-pill"><i class="ti ti-percentage" style="font-size:11px;"></i> ${commRate}% · $${commission.toFixed(0)}</div>
+              ${emailBadge}
             </div>
           </div>
           <div class="rc-footer">
@@ -695,11 +935,17 @@
             </button>
             <button class="rc-del-btn" onclick="openDeleteResto('${r.id}', '${r.name.replace(/'/g, "\\'")}')"><i class="ti ti-trash"></i></button>
           </div>
+          <div style="padding:0 16px 14px;">
+            <button class="rc-access-btn" onclick="openAccessModal('${r.id}')">
+              <i class="ti ti-key"></i>
+              ${r.email ? 'Nouveau lien de connexion' : 'Créer accès dashboard'}
+            </button>
+          </div>
         </div>`
     }).join('')
   }
 
-  /* ── Render orders ── */
+  /* ── RENDER ORDERS ── */
   function renderOrders() {
     const search = (document.getElementById('orders-search').value || '').toLowerCase()
     const statusFilter = document.getElementById('orders-status-filter').value
@@ -711,7 +957,6 @@
     if (restoFilter !== 'all') orders = orders.filter(o => o.restaurant_id === restoFilter)
 
     document.getElementById('orders-count').textContent = orders.length
-
     const statusMap = {
       pending:    `<span class="status-badge s-pending">⏳ En attente</span>`,
       preparing:  `<span class="status-badge s-preparing">🍳 Préparation</span>`,
@@ -736,42 +981,48 @@
       </tr>`
     }).join('')
 
-    // Update stats bar
-    document.getElementById('all-pending').textContent  = allOrders.filter(o => o.status === 'pending').length
-    document.getElementById('all-preparing').textContent= allOrders.filter(o => o.status === 'preparing').length
-    document.getElementById('all-delivered').textContent= allOrders.filter(o => o.status === 'delivered').length
+    document.getElementById('all-pending').textContent   = allOrders.filter(o => o.status === 'pending').length
+    document.getElementById('all-preparing').textContent = allOrders.filter(o => o.status === 'preparing').length
+    document.getElementById('all-delivered').textContent = allOrders.filter(o => o.status === 'delivered').length
     const rev = allOrders.filter(o => o.status === 'delivered').reduce((s,o) => s + Number(o.total || 0), 0)
-    document.getElementById('all-revenue').textContent  = '$' + rev.toFixed(0)
+    document.getElementById('all-revenue').textContent   = '$' + rev.toFixed(0)
   }
 
-  /* ── Render stats ── */
+  /* ── RENDER STATS ── */
   function renderStats() {
     document.getElementById('stat-total-restos').textContent = allRestos.length
     document.getElementById('stat-open-restos').textContent  = allRestos.filter(r => r.is_open !== false).length
     document.getElementById('stat-total-orders').textContent = allOrders.length
     const rev = allOrders.filter(o => o.status === 'delivered').reduce((s,o) => s + Number(o.total || 0), 0)
-    document.getElementById('stat-total-revenue').textContent  = '$' + rev.toFixed(2)
-    document.getElementById('stat-commission').textContent     = '$' + (rev * 0.05).toFixed(2)
+    document.getElementById('stat-total-revenue').textContent = '$' + rev.toFixed(2)
+    let totalCommission = 0
+    allRestos.forEach(r => {
+      const rate = getCommissionRate(r)
+      const restoRevenue = allOrders.filter(o => o.restaurant_id === r.id && o.status === 'delivered').reduce((s,o) => s + Number(o.total || 0), 0)
+      totalCommission += restoRevenue * rate / 100
+    })
+    document.getElementById('stat-commission').textContent = '$' + totalCommission.toFixed(2)
     const today = new Date().toDateString()
     document.getElementById('stat-today-delivered').textContent = allOrders.filter(o => o.status === 'delivered' && new Date(o.created_at).toDateString() === today).length
 
-    // Top restos table
-    const tbody = document.getElementById('stats-tbody')
     const CAT_ICONS = { Burgers:'🍔', Shawarma:'🌯', Pizza:'🍕', Healthy:'🥗', Sushi:'🍣', Grillades:'🥩' }
+    const tbody = document.getElementById('stats-tbody')
     const restoStats = allRestos.map(r => {
       const delivered = allOrders.filter(o => o.restaurant_id === r.id && o.status === 'delivered')
       const ca = delivered.reduce((s,o) => s + Number(o.total || 0), 0)
-      return { ...r, deliveredCount: delivered.length, ca }
+      const commRate = getCommissionRate(r)
+      return { ...r, deliveredCount: delivered.length, ca, commRate, commAmount: ca * commRate / 100 }
     }).sort((a,b) => b.ca - a.ca)
 
-    if (restoStats.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#3a3a38;padding:30px;">Aucun restaurant</td></tr>'; return }
+    if (!restoStats.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#3a3a38;padding:30px;">Aucun restaurant</td></tr>'; return }
     tbody.innerHTML = restoStats.map(r => `
       <tr>
         <td><strong style="color:#e8e8e4;">${r.name}</strong></td>
         <td style="color:#6a6a67;">${CAT_ICONS[r.category] || '🍽️'} ${r.category || '—'}</td>
         <td style="color:#a8a8a4;">${r.deliveredCount}</td>
         <td style="color:#c97848;font-weight:600;">$${r.ca.toFixed(2)}</td>
-        <td style="color:#5a5a57;">$${(r.ca * 0.05).toFixed(2)}</td>
+        <td><span style="background:#1a1a3a;border:0.5px solid #2a2a5a;color:#8a78cf;padding:2px 8px;border-radius:5px;font-size:12px;">${r.commRate}%</span></td>
+        <td style="color:#8a78cf;font-weight:500;">$${r.commAmount.toFixed(2)}</td>
         <td>${r.is_open !== false ? '<span class="status-badge s-delivered">🟢 Ouvert</span>' : '<span class="status-badge s-refused">🔴 Fermé</span>'}</td>
       </tr>`).join('')
   }
@@ -782,10 +1033,16 @@
     document.getElementById('stat-total-orders').textContent = allOrders.length
     const rev = allOrders.filter(o => o.status === 'delivered').reduce((s,o) => s + Number(o.total || 0), 0)
     document.getElementById('stat-total-revenue').textContent = '$' + rev.toFixed(2)
-    document.getElementById('stat-commission').textContent    = '$' + (rev * 0.05).toFixed(2)
+    let totalCommission = 0
+    allRestos.forEach(r => {
+      const rate = getCommissionRate(r)
+      const restoRevenue = allOrders.filter(o => o.restaurant_id === r.id && o.status === 'delivered').reduce((s,o) => s + Number(o.total || 0), 0)
+      totalCommission += restoRevenue * rate / 100
+    })
+    document.getElementById('stat-commission').textContent = '$' + totalCommission.toFixed(2)
   }
 
-  /* ── Resto CRUD ── */
+  /* ── RESTO CRUD ── */
   function openAddResto() {
     editingRestoId = null
     document.getElementById('resto-modal-title').textContent = 'Ajouter un restaurant'
@@ -793,6 +1050,7 @@
     document.getElementById('resto-save-btn').innerHTML = '<i class="ti ti-plus"></i> Ajouter le restaurant'
     ;['r-name','r-desc','r-delivery-time','r-min-order','r-delivery-fee','r-image','r-address','r-phone'].forEach(id => document.getElementById(id).value = '')
     document.getElementById('r-category').value = ''
+    document.getElementById('r-commission').value = DEFAULT_COMMISSION
     document.getElementById('r-is-open').checked = true
     document.getElementById('r-img-preview').classList.remove('visible')
     document.getElementById('resto-modal').classList.add('open')
@@ -810,6 +1068,7 @@
     document.getElementById('r-delivery-time').value = r.delivery_time || ''
     document.getElementById('r-min-order').value     = r.min_order || ''
     document.getElementById('r-delivery-fee').value  = r.delivery_fee || ''
+    document.getElementById('r-commission').value    = r.commission_rate != null ? r.commission_rate : DEFAULT_COMMISSION
     document.getElementById('r-image').value         = r.image_url || ''
     document.getElementById('r-address').value       = r.address || ''
     document.getElementById('r-phone').value         = r.phone || ''
@@ -830,20 +1089,20 @@
     const category = document.getElementById('r-category').value
     if (!name) { alert('Le nom est obligatoire'); return }
     if (!category) { alert('La catégorie est obligatoire'); return }
-
+    const commissionVal = parseFloat(document.getElementById('r-commission').value)
     const payload = {
       name,
-      description:   document.getElementById('r-desc').value.trim() || null,
+      description:     document.getElementById('r-desc').value.trim() || null,
       category,
-      delivery_time: document.getElementById('r-delivery-time').value.trim() || null,
-      min_order:     parseFloat(document.getElementById('r-min-order').value) || null,
-      delivery_fee:  parseFloat(document.getElementById('r-delivery-fee').value) || null,
-      image_url:     document.getElementById('r-image').value.trim() || null,
-      address:       document.getElementById('r-address').value.trim() || null,
-      phone:         document.getElementById('r-phone').value.trim() || null,
-      is_open:       document.getElementById('r-is-open').checked
+      delivery_time:   document.getElementById('r-delivery-time').value.trim() || null,
+      min_order:       parseFloat(document.getElementById('r-min-order').value) || null,
+      delivery_fee:    parseFloat(document.getElementById('r-delivery-fee').value) || null,
+      commission_rate: isNaN(commissionVal) ? DEFAULT_COMMISSION : commissionVal,
+      image_url:       document.getElementById('r-image').value.trim() || null,
+      address:         document.getElementById('r-address').value.trim() || null,
+      phone:           document.getElementById('r-phone').value.trim() || null,
+      is_open:         document.getElementById('r-is-open').checked
     }
-
     if (editingRestoId) {
       const { error } = await db.from('restaurants').update(payload).eq('id', editingRestoId)
       if (error) { showToast('Erreur : ' + error.message, 'error'); return }
@@ -851,10 +1110,9 @@
     } else {
       const { error } = await db.from('restaurants').insert(payload)
       if (error) { showToast('Erreur : ' + error.message, 'error'); return }
-      showToast('Restaurant ajouté ✓ — Il est maintenant visible dans l\'app !')
+      showToast('Restaurant ajouté ✓')
     }
-    closeModal('resto-modal')
-    await fetchRestos()
+    closeModal('resto-modal'); await fetchRestos()
   }
 
   function openDeleteResto(restoId, restoName) {
@@ -864,34 +1122,28 @@
   }
 
   async function confirmDeleteResto() {
-    // Supprime d'abord les menu_items du resto
     await db.from('menu_items').delete().eq('restaurant_id', deletingRestoId)
     const { error } = await db.from('restaurants').delete().eq('id', deletingRestoId)
     if (error) { showToast('Erreur : ' + error.message, 'error'); return }
-    closeModal('delete-modal')
-    showToast('Restaurant supprimé')
-    await fetchRestos()
+    closeModal('delete-modal'); showToast('Restaurant supprimé'); await fetchRestos()
   }
 
   async function toggleRestoOpen(restoId, currentState) {
-    const newState = !currentState
-    const { error } = await db.from('restaurants').update({ is_open: newState }).eq('id', restoId)
+    const { error } = await db.from('restaurants').update({ is_open: !currentState }).eq('id', restoId)
     if (error) { showToast('Erreur', 'error'); return }
-    showToast(newState ? '🟢 Restaurant ouvert' : '🔴 Restaurant fermé')
+    showToast(!currentState ? '🟢 Restaurant ouvert' : '🔴 Restaurant fermé')
     await fetchRestos()
   }
 
   function closeModal(id) {
     document.getElementById(id).classList.remove('open')
-    editingRestoId = null; deletingRestoId = null
+    editingRestoId = null; deletingRestoId = null; accessRestoId = null
   }
 
-  // Fermer modal en cliquant l'overlay
   document.querySelectorAll('.modal-overlay').forEach(overlay => {
-    overlay.addEventListener('click', function(e) {
-      if (e.target === this) this.classList.remove('open')
-    })
+    overlay.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('open') })
   })
 </script>
 </body>
 </html>
+

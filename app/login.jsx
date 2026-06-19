@@ -72,14 +72,13 @@ export default function LoginScreen() {
     else { setStep(2); startResendTimer() }
   }
 
-  async function resendOtp() {
-    if (resendTimer > 0) return
-    setLoading(true)
-    const { error } = await supabase.auth.signInWithOtp({ phone: formatPhone(phone) })
-    setLoading(false)
-    if (error) Alert.alert('Erreur', error.message)
-    else startResendTimer()
-  }
+async function sendOtp() {
+  const digits = phone.replace(/\D/g, '')
+  if (digits.length < 7) return Alert.alert('Erreur', 'Entre un numéro de téléphone valide')
+  
+  // BYPASS TEMPORAIRE - skip OTP
+  router.replace('/(tabs)')
+}
 
   // ─── Gestion champs OTP ───────────────────────────────────────────────────
   function handleOtpChange(val, idx) {
