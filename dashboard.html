@@ -743,11 +743,11 @@
             <div class="stat-card"><div class="stat-lbl"><i class="ti ti-bike"></i> En route</div><div class="stat-val c-p" id="cnt-onway">0</div><div class="stat-sub">livraisons actives</div></div>
             <div class="stat-card hi-p"><div class="stat-lbl"><i class="ti ti-device-mobile"></i> Whish en attente</div><div class="stat-val c-p" id="cnt-whish">0</div><div class="stat-sub">paiement à confirmer</div></div>
           </div>
-          <div class="stats-grid2">
-            <div class="stat-card"><div class="stat-lbl"><i class="ti ti-check"></i> Livrées aujourd'hui</div><div class="stat-val c-g" id="cnt-del">0</div><div class="stat-sub">depuis ce matin</div></div>
-            <div class="stat-card"><div class="stat-lbl"><i class="ti ti-currency-dollar"></i> Chiffre d'affaires</div><div class="stat-val c-g" id="total-ca">$0</div><div class="stat-sub">commandes livrées</div></div>
-            <div class="stat-card"><div class="stat-lbl"><i class="ti ti-percentage"></i> Commission (5%)</div><div class="stat-val c-m" id="total-comm">$0</div><div class="stat-sub">à reverser</div></div>
-          </div>
+         <div class="stats-grid2">
+  <div class="stat-card"><div class="stat-lbl"><i class="ti ti-check"></i> Livrées aujourd'hui</div><div class="stat-val c-g" id="cnt-del">0</div><div class="stat-sub">depuis ce matin</div></div>
+  <div class="stat-card"><div class="stat-lbl"><i class="ti ti-currency-dollar"></i> Chiffre d'affaires</div><div class="stat-val c-g" id="total-ca">$0</div><div class="stat-sub">commandes livrées</div></div>
+  <div class="stat-card"><div class="stat-lbl"><i class="ti ti-percentage"></i> Commission (<span id="comm-rate-lbl">5</span>%)</div><div class="stat-val c-m" id="total-comm">$0</div><div class="stat-sub">à reverser</div></div>
+</div>
 
           <div class="tabs">
             <button class="tab active" onclick="tabFilter(event,'active')">Actives <span class="n" id="tab-active-n">0</span></button>
@@ -809,7 +809,7 @@ const SUPABASE_KEY = 'sb_publishable_DFixcj3yogS-1sS3fpOQww_YIccZM9f'
 const { createClient } = supabase
 const db = createClient(SUPABASE_URL, SUPABASE_KEY)
 
-let restoId = null, restoName = null
+let restoId = null, restoName = null, commissionRate = 5
 let allOrders = [], allMenuItems = []
 let currentFilter = 'active', menuCatFilter = 'all'
 let soundOn = true, channel = null
@@ -1054,14 +1054,11 @@ function logout() {
 
 
 
-
-
-
-/* ── DASHBOARD ── */
 async function startDashboard() {
-  const {data}=await db.from('restaurants').select('is_open,opening_hours,status_mode').eq('id',restoId).single()
+  const {data}=await db.from('restaurants').select('is_open,opening_hours,status_mode,commission_rate').eq('id',restoId).single()
   openingHours=data?.opening_hours||{}; isOpen=data?.is_open!==false
   statusMode=data?.status_mode||'manual'
+  commissionRate = data?.commission_rate != null ? Number(data.commission_rate) : 5
   if(statusMode==='manual')statusMode=isOpen?'open':'closed'
   document.getElementById('mopt-open').classList.toggle('sel',statusMode==='open')
   document.getElementById('mopt-closed').classList.toggle('sel',statusMode==='closed')
@@ -1075,6 +1072,14 @@ async function startDashboard() {
       await fetchOrders()
     }).subscribe()
 }
+
+
+
+
+
+
+
+
 
 async function fetchOrders() {
   const {data}=await db.from('orders').select('*').eq('restaurant_id',restoId).order('created_at',{ascending:false})
@@ -1121,7 +1126,8 @@ function updateStats() {
   document.getElementById('tab-all-n').textContent=allOrders.length
   const ca=allOrders.filter(o=>o.status==='delivered').reduce((s,o)=>s+Number(o.total||0),0)
   document.getElementById('total-ca').textContent='$'+ca.toFixed(2)
-  document.getElementById('total-comm').textContent='$'+(ca*.05).toFixed(2)
+  document.getElementById('total-comm').textContent='$'+(ca*(commissionRate/100)).toFixed(2)
+  document.getElementById('comm-rate-lbl').textContent = commissionRate
 }
 
 /* ── ORDERS RENDER ── */
