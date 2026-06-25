@@ -98,7 +98,7 @@ export default function CheckoutScreen() {
     }).select().single()
 
     setLoading(false)
-    if (error) { Alert.alert(t('checkout.errorTitle'), t('checkout.orderFailed')); return }
+    if (error) { console.log('ORDER ERROR:', JSON.stringify(error)); Alert.alert(t('checkout.errorTitle'), error.message || t('checkout.orderFailed')); return }
     if (payMethod === 'whish') {
       Linking.openURL(WHISH_LINK).catch(() => Alert.alert(t('checkout.errorTitle'), t('checkout.whishOpenError')))
     }

@@ -212,8 +212,6 @@
     .btn-generate:disabled { opacity: 0.5; cursor: not-allowed; }
 
     /* Zone lien généré */
-    .link-result { display: none; margin-top: 14px; }
-    .link-result.visible { display: block; }
     .link-box { background: #0a1a0a; border: 0.5px solid #1a4a1a; border-radius: 10px; padding: 14px; }
     .link-box-title { font-size: 11px; font-weight: 700; color: #4a9a4a; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
     .link-text { font-family: monospace; font-size: 11px; color: #6aba6a; word-break: break-all; line-height: 1.6; background: #061206; border: 0.5px solid #1a3a1a; border-radius: 7px; padding: 10px 12px; margin-bottom: 10px; }
@@ -227,15 +225,10 @@
 
     /* Email déjà défini */
     .existing-email-box { background: #0e1a28; border: 0.5px solid #1e3040; border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-    .existing-email-val { font-size: 13px; color: #6a9abf; font-weight: 500; }
     .btn-change-email { background: transparent; border: 0.5px solid #2a3a4a; color: #4a6a8a; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 11px; font-family: inherit; transition: all .15s; }
     .btn-change-email:hover { border-color: #4a8abf; color: #4a8abf; }
 
     /* Config key manquante */
-    .key-warning { background: #2a1a0a; border: 0.5px solid #4a3a1a; border-radius: 10px; padding: 14px 16px; display: flex; align-items: flex-start; gap: 10px; margin-bottom: 16px; }
-    .key-warning i { color: #c97848; font-size: 16px; flex-shrink: 0; margin-top: 1px; }
-    .key-warning-text { font-size: 12px; color: #9a7a4a; line-height: 1.55; }
-    .key-warning-text strong { color: #c97848; }
     .key-input-row { display: flex; gap: 8px; margin-top: 8px; }
     .key-input-row input { flex: 1; margin-bottom: 0; font-family: monospace; font-size: 12px; }
     .btn-save-key { background: #c97848; border: none; color: #1a0e08; padding: 10px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap; }
@@ -271,66 +264,28 @@
 <!-- ══ MODAL: Accès Dashboard Resto ══ -->
 <div class="modal-overlay access-modal" id="access-modal">
   <div class="modal" style="max-width:480px;">
-    <div class="modal-title">🔑 Accès dashboard</div>
-    <div class="modal-sub" id="access-modal-sub">Génère un lien de connexion pour ce restaurant</div>
+    <div class="modal-title">🔑 Lien dashboard</div>
+    <div class="modal-sub" id="access-modal-sub">Lien direct pour ce restaurant</div>
 
-    <!-- Avertissement si service key pas configurée -->
-    <div class="key-warning" id="key-warning" style="display:none;">
-      <i class="ti ti-alert-triangle"></i>
-      <div class="key-warning-text">
-        <strong>Service Role Key manquante</strong><br>
-        Pour générer des liens, colle ta <strong>service_role key</strong> Supabase ci-dessous.<br>
-        Elle se trouve dans : Settings → API → service_role.<br>
-        Elle reste stockée uniquement dans ce navigateur.
-        <div class="key-input-row">
-          <input type="password" id="service-key-input" placeholder="eyJ..." />
-          <button class="btn-save-key" onclick="saveServiceKey()">Enregistrer</button>
-        </div>
+    <div style="background:#0e1a28;border:0.5px solid #1e3a5a;border-radius:10px;padding:14px 16px;margin-bottom:18px;display:flex;align-items:flex-start;gap:10px;">
+      <i class="ti ti-info-circle" style="color:#4a8abf;font-size:16px;flex-shrink:0;margin-top:1px;"></i>
+      <div style="font-size:12px;color:#4a7a9a;line-height:1.55;">Le gérant clique sur ce lien et il est directement connecté à son dashboard. <strong style="color:#6a9abf;">Pas de mot de passe, pas d'email.</strong></div>
+    </div>
+
+    <div id="access-link-box" style="display:none;background:#0e0e0d;border:0.5px solid #2a2a28;border-radius:10px;padding:14px;margin-bottom:16px;">
+      <div style="font-size:11px;color:#4a9a6a;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px;"><i class="ti ti-circle-check" style="font-size:13px;"></i> Lien prêt</div>
+      <div id="access-link-text" style="font-size:11px;color:#6a6a67;word-break:break-all;font-family:monospace;line-height:1.5;margin-bottom:12px;">—</div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="copyAccessLink()" id="btn-copy-access" style="flex:1;background:#1a1a18;border:0.5px solid #2a2a28;color:#c8c8c4;padding:8px;border-radius:7px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;gap:5px;font-family:inherit;transition:all .15s;"><i class="ti ti-copy" style="font-size:13px;"></i> Copier</button>
+        <a id="btn-wa-access" href="#" target="_blank" style="flex:1;background:#0d2010;border:0.5px solid #1a4020;color:#4a9a6a;padding:8px;border-radius:7px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;gap:5px;text-decoration:none;transition:all .15s;"><i class="ti ti-brand-whatsapp" style="font-size:13px;"></i> WhatsApp</a>
       </div>
     </div>
 
-    <!-- Email du resto -->
-    <div class="access-step" id="step-email">
-      <div class="access-step-num">Étape 1 — Email du restaurant</div>
-      <div class="access-step-title">Email de connexion</div>
-      <div class="access-step-desc">C'est l'email que le gérant utilisera pour se connecter. Il n'a pas besoin d'y accéder — tu lui envoies le lien toi-même.</div>
+    <button onclick="generateDirectLink()" id="btn-gen-direct" style="width:100%;background:#c97848;border:none;color:#1a0e08;padding:12px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .15s;">
+      <i class="ti ti-link" style="font-size:16px;"></i> Obtenir le lien
+    </button>
 
-      <div id="existing-email-zone" style="display:none;">
-        <div class="existing-email-box">
-          <span class="existing-email-val" id="existing-email-val">—</span>
-          <button class="btn-change-email" onclick="allowChangeEmail()">Changer</button>
-        </div>
-      </div>
-      <div id="new-email-zone">
-        <div class="email-input-row">
-          <input type="email" id="access-email-input" placeholder="ex: burgerhouse@restodash.app" />
-          <button class="btn-generate" onclick="generateLink()" id="btn-generate">
-            <i class="ti ti-link"></i> Générer le lien
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Lien généré -->
-    <div class="link-result" id="link-result">
-      <div class="link-box">
-        <div class="link-box-title"><i class="ti ti-circle-check" style="font-size:13px;"></i> Lien prêt à envoyer</div>
-        <div class="link-text" id="link-text-display">—</div>
-        <div class="link-expires"><i class="ti ti-clock" style="font-size:12px;"></i> Expire dans 1 heure — génère un nouveau si besoin</div>
-        <div class="link-actions">
-          <button class="btn-copy" onclick="copyLink()" id="btn-copy"><i class="ti ti-copy"></i> Copier le lien</button>
-          <a class="btn-whatsapp" id="btn-whatsapp" href="#" target="_blank"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
-        </div>
-      </div>
-    </div>
-
-    <div class="access-step" style="margin-top:12px;">
-      <div class="access-step-num">Étape 2 — Envoyer au gérant</div>
-      <div class="access-step-title">Envoie-lui le lien</div>
-      <div class="access-step-desc">Par WhatsApp, SMS, Telegram... Le gérant clique dessus et il est directement connecté à son dashboard. <strong style="color:#c8c8c4;">Pas de mot de passe à retenir.</strong></div>
-    </div>
-
-    <div class="modal-actions">
+    <div class="modal-actions" style="margin-top:10px;">
       <button class="btn-cancel" onclick="closeModal('access-modal')">Fermer</button>
     </div>
   </div>
@@ -666,14 +621,8 @@
 
 
  /* ── SERVICE KEY (stockée dans localStorage, jamais envoyée nulle part) ── */
-function getServiceKey() { return localStorage.getItem('sb_service_key') || '' }
-function saveServiceKey() {
-  const key = document.getElementById('service-key-input').value.trim()
-  if (!key || key.length < 20) { showToast('Clé trop courte', 'error'); return }
-  localStorage.setItem('sb_service_key', key)
-  document.getElementById('key-warning').style.display = 'none'
-  showToast('Clé enregistrée ✓')
-}
+function getServiceKey() { return '' }
+function saveServiceKey() {}
 
 
 
@@ -783,82 +732,55 @@ function saveServiceKey() {
     const resto = allRestos.find(r => r.id === restoId)
     if (!resto) return
 
-    document.getElementById('access-modal-sub').textContent = `Accès pour : ${resto.name}`
-    document.getElementById('link-result').classList.remove('visible')
-    generatedLink = ''
+    document.getElementById('access-modal-sub').textContent = 'Accès pour : ' + resto.name
+    document.getElementById('access-link-box').style.display = 'none'
+    document.getElementById('btn-gen-direct').innerHTML = '<i class="ti ti-link" style="font-size:16px;"></i> Obtenir le lien'
+    document.getElementById('access-link-text').textContent = '—'
 
-    // Vérifier si service key disponible
-    const hasKey = !!getServiceKey()
-    document.getElementById('key-warning').style.display = hasKey ? 'none' : 'flex'
-
-    // Email déjà défini ?
-    if (resto.email) {
-      document.getElementById('existing-email-val').textContent = resto.email
-      document.getElementById('existing-email-zone').style.display = 'block'
-      document.getElementById('new-email-zone').style.display = 'none'
-      document.getElementById('access-email-input').value = resto.email
-    } else {
-      document.getElementById('existing-email-zone').style.display = 'none'
-      document.getElementById('new-email-zone').style.display = 'block'
-      document.getElementById('access-email-input').value = ''
+    const existing = localStorage.getItem('dash_token_' + restoId)
+    if (existing) {
+      const dashUrl = window.location.href.replace('admin.html', 'dashboard.html')
+      const link = dashUrl + '?t=' + existing
+      document.getElementById('access-link-text').textContent = link
+      document.getElementById('access-link-box').style.display = 'block'
+      const waMsg = encodeURIComponent('Bonjour ' + (resto.name||'') + '\n\nVoici votre lien dashboard :\n\n' + link)
+      document.getElementById('btn-wa-access').href = 'https://wa.me/?text=' + waMsg
+      document.getElementById('btn-gen-direct').innerHTML = '<i class="ti ti-refresh" style="font-size:16px;"></i> Regénérer'
     }
 
     document.getElementById('access-modal').classList.add('open')
   }
 
-  function allowChangeEmail() {
-    document.getElementById('existing-email-zone').style.display = 'none'
-    document.getElementById('new-email-zone').style.display = 'block'
-    document.getElementById('access-email-input').value = ''
-    document.getElementById('link-result').classList.remove('visible')
+  function allowChangeEmail() {}
+
+
+
+  function generateDirectLink() {
+    if (!accessRestoId) return
+    const token = btoa(accessRestoId + ':' + Date.now())
+    const dashUrl = window.location.href.replace('admin.html', 'dashboard.html')
+    const link = dashUrl + '?t=' + token
+    localStorage.setItem('dash_token_' + accessRestoId, token)
+    document.getElementById('access-link-text').textContent = link
+    document.getElementById('access-link-box').style.display = 'block'
+    const resto = allRestos.find(r => r.id === accessRestoId)
+    const waMsg = encodeURIComponent('Bonjour ' + (resto?.name||'') + ' 👋\n\nVoici votre lien dashboard :\n\n' + link + '\n\nCliquez directement pour accéder à votre tableau de bord.')
+    document.getElementById('btn-wa-access').href = 'https://wa.me/?text=' + waMsg
+    document.getElementById('btn-gen-direct').innerHTML = '<i class="ti ti-refresh" style="font-size:16px;"></i> Regénérer'
+    showToast('Lien copié automatiquement ✓')
+    navigator.clipboard.writeText(link).catch(()=>{})
   }
 
-
-
- async function generateLink() {
-    const email = document.getElementById('access-email-input').value.trim()
-    if (!email || !email.includes('@')) {
-      showToast('Email invalide', 'error'); return
-    }
-
-    const btn = document.getElementById('btn-generate')
-    btn.disabled = true
-    btn.innerHTML = '<i class="ti ti-loader"></i> Génération...'
-
-    try {
-      const { data: fnData, error: fnError } = await db.functions.invoke('quick-handler', {
-        body: { email, redirectTo: DASH_URL }
-      })
-      if (fnError || fnData?.error) throw new Error(fnData?.error || fnError?.message)
-      const link = fnData.link
-      if (!link) throw new Error('Lien non généré')
-
-      generatedLink = link
-
-      const updatePayload = { email, auth_user_id: fnData.user_id }
-      await db.from('restaurants').update(updatePayload).eq('id', accessRestoId)
-      await fetchRestos()
-
-
-      // Affiche le lien
-      document.getElementById('link-text-display').textContent = link
-      document.getElementById('link-result').classList.add('visible')
-
-      // Lien WhatsApp
-      const resto = allRestos.find(r => r.id === accessRestoId)
-      const waMsg = encodeURIComponent(`Bonjour ${resto?.name} 👋\n\nVoici votre lien de connexion à votre dashboard Resto.dash :\n\n${link}\n\n⚠️ Ce lien expire dans 1 heure. Si besoin, demandez-en un nouveau.`)
-      document.getElementById('btn-whatsapp').href = `https://wa.me/?text=${waMsg}`
-
-      showToast('Lien généré ✓')
-
-    } catch (err) {
-      console.error(err)
-      showToast('Erreur : ' + (err.message || 'Vérife ta service key'), 'error')
-    }
-
-    btn.disabled = false
-    btn.innerHTML = '<i class="ti ti-link"></i> Générer le lien'
+  function copyAccessLink() {
+    const link = document.getElementById('access-link-text').textContent
+    navigator.clipboard.writeText(link).then(() => {
+      const btn = document.getElementById('btn-copy-access')
+      btn.innerHTML = '<i class="ti ti-check" style="font-size:13px;"></i> Copié !'
+      setTimeout(() => { btn.innerHTML = '<i class="ti ti-copy" style="font-size:13px;"></i> Copier' }, 2000)
+    })
   }
+
+  async function generateLink() {}
 
   function copyLink() {
     if (!generatedLink) return
@@ -1155,4 +1077,5 @@ function saveServiceKey() {
 </script>
 </body>
 </html>
+
 

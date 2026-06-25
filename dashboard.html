@@ -996,32 +996,46 @@ async function acceptFromNotif(){if(!notifOrderId)return;const id=notifOrderId;d
 
 
 async function loadRestaurants() {
-  const { data: { session } } = await db.auth.getSession()
+  const params = new URLSearchParams(window.location.search)
+  const token = params.get('t')
 
-  if (!session) {
+  if (!token) {
     document.getElementById('login-spinner').style.display = 'none'
     document.getElementById('login-error').style.display = 'block'
-    document.getElementById('login-title').textContent = 'Accès refusé'
-    document.getElementById('login-sub').textContent = 'Aucune session valide détectée.'
+    document.getElementById('login-title').textContent = 'Lien manquant'
+    document.getElementById('login-sub').textContent = 'Demande un lien à l\'administrateur depuis le panel admin.'
     return
   }
 
-  const { data: resto } = await db
+  let restoIdFromToken = null
+  try {
+    const decoded = atob(token)
+    restoIdFromToken = decoded.split(':')[0]
+  } catch(e) {
+    document.getElementById('login-spinner').style.display = 'none'
+    document.getElementById('login-error').style.display = 'block'
+    document.getElementById('login-title').textContent = 'Lien invalide'
+    document.getElementById('login-sub').textContent = 'Ce lien est corrompu. Demande-en un nouveau.'
+    return
+  }
+
+  const { data: resto, error } = await db
     .from('restaurants')
-    .select('id, name')
-    .eq('auth_user_id', session.user.id)
+    .select('id, name, commission_rate')
+    .eq('id', restoIdFromToken)
     .single()
 
-  if (!resto) {
+  if (error || !resto) {
     document.getElementById('login-spinner').style.display = 'none'
     document.getElementById('login-error').style.display = 'block'
     document.getElementById('login-title').textContent = 'Restaurant introuvable'
-    document.getElementById('login-sub').textContent = 'Ce compte n\'est lié à aucun restaurant. Contacte l\'administrateur.'
+    document.getElementById('login-sub').textContent = 'L\'identifiant dans le lien ne correspond à aucun restaurant.'
     return
   }
 
   restoId = resto.id
   restoName = resto.name
+  commissionRate = resto.commission_rate || 5
   document.getElementById('login-screen').style.display = 'none'
   document.getElementById('app-screen').style.display = 'flex'
   document.getElementById('topbar-resto').textContent = restoName
@@ -1038,16 +1052,11 @@ async function loadRestaurants() {
 
 
 function logout() {
-  db.auth.signOut()  // déconnecte la session Supabase
   if (channel) db.removeChannel(channel)
   if (autoInterval) clearInterval(autoInterval)
   dismissNotif()
   restoId = null
-  document.getElementById('app-screen').style.display = 'none'
-  document.getElementById('login-screen').style.display = 'flex'
-  document.getElementById('login-title').textContent = 'Déconnecté'
-  document.getElementById('login-sub').textContent = 'Demande un nouveau lien à l\'administrateur pour te reconnecter.'
-  document.getElementById('login-spinner').style.display = 'none'
+  window.location.href = window.location.pathname
 }
 
 
@@ -1452,3 +1461,4 @@ loadRestaurants()
 </script>
 </body>
 </html>
+
