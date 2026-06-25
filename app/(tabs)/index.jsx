@@ -30,6 +30,37 @@ const CARD = '#131313'
 const BORDER = '#1c1c1c'
 const WHITE = '#ffffff'
 
+function SkeletonCard({ wide }) {
+  const shimmer = useRef(new Animated.Value(0)).current
+  useEffect(() => {
+    Animated.loop(Animated.sequence([
+      Animated.timing(shimmer, { toValue: 1, duration: 900, useNativeDriver: true }),
+      Animated.timing(shimmer, { toValue: 0, duration: 900, useNativeDriver: true }),
+    ])).start()
+  }, [])
+  const opacity = shimmer.interpolate({ inputRange: [0,1], outputRange: [0.3,0.6] })
+  if (wide) return (
+    <Animated.View style={[sk.featCard, { opacity }]}>
+      <View style={sk.featImg} /><View style={sk.featBody}><View style={sk.titleBar} /><View style={sk.subBar} /></View>
+    </Animated.View>
+  )
+  return (
+    <Animated.View style={[sk.compCard, { opacity }]}>
+      <View style={sk.compImg} /><View style={sk.compBody}><View style={sk.titleBar} /><View style={sk.subBar} /></View>
+    </Animated.View>
+  )
+}
+const sk = StyleSheet.create({
+  featCard: { marginHorizontal:16, marginBottom:16, borderRadius:24, backgroundColor:'#131313', overflow:'hidden', height:280 },
+  featImg: { width:'100%', height:220, backgroundColor:'#1c1c1c' },
+  featBody: { padding:16, gap:10 },
+  compCard: { flexDirection:'row', marginHorizontal:16, marginBottom:10, borderRadius:18, backgroundColor:'#131313', overflow:'hidden', height:96 },
+  compImg: { width:96, height:96, backgroundColor:'#1c1c1c' },
+  compBody: { flex:1, padding:12, gap:10, justifyContent:'center' },
+  titleBar: { height:12, backgroundColor:'#222', borderRadius:6, width:'70%' },
+  subBar: { height:10, backgroundColor:'#1a1a1a', borderRadius:5, width:'50%' },
+})
+
 export default function HomeScreen() {
   const { t } = useTranslation()
   const [restaurants, setRestaurants] = useState([])
@@ -37,6 +68,8 @@ export default function HomeScreen() {
   const [selectedCat, setSelectedCat] = useState('Tout')
   const [location, setLocation] = useState(null)
   const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState(null)
   const router = useRouter()
 
   const headerFade = useRef(new Animated.Value(0)).current
@@ -77,8 +110,11 @@ export default function HomeScreen() {
   }
 
   async function fetchRestaurants() {
-    const { data } = await supabase.from('restaurants').select('*')
+    setFetchError(null)
+    const { data, error } = await supabase.from('restaurants').select('*')
+    if (error) { setFetchError('Impossible de charger les restaurants'); setLoading(false); return }
     if (data) setRestaurants(data)
+    setLoading(false)
   }
 
   function getCatLabel(cat) {
@@ -251,8 +287,29 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
 
+        {/* ── Loading skeletons ── */}
+        {loading && (
+          <View>
+            <SkeletonCard wide />
+            <SkeletonCard wide />
+            <SkeletonCard />
+            <SkeletonCard />
+          </View>
+        )}
+
+        {/* ── Error state ── */}
+        {!loading && fetchError && (
+          <View style={s.errorBox}>
+            <Text style={s.errorEmoji}>⚠️</Text>
+            <Text style={s.errorTitle}>{fetchError}</Text>
+            <TouchableOpacity style={s.retryBtn} onPress={fetchRestaurants}>
+              <Text style={s.retryTxt}>Réessayer</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* ── Empty state ── */}
-        {filtered.length === 0 && (
+        {!loading && !fetchError && filtered.length === 0 && (
           <View style={s.emptyBox}>
             <Text style={s.emptyEmoji}>🍽️</Text>
             <Text style={s.emptyTitle}>{t('home.noRestaurants')}</Text>
@@ -261,7 +318,7 @@ export default function HomeScreen() {
         )}
 
         {/* ── Featured ── */}
-        {featured.length > 0 && (
+        {!loading && !fetchError && featured.length > 0 && (
           <>
             <View style={s.secRow}>
               <Text style={s.secTitle}>
@@ -278,7 +335,7 @@ export default function HomeScreen() {
         )}
 
         {/* ── Rest ── */}
-        {rest.length > 0 && (
+        {!loading && !fetchError && rest.length > 0 && (
           <>
             <View style={s.secRow}>
               <Text style={s.secTitle}>🔥  Autres restos</Text>
@@ -363,10 +420,14 @@ const s = StyleSheet.create({
 
   // Utils
   imgDim:         { opacity: 0.45 },
+  errorBox:       { alignItems: 'center', marginTop: 80, paddingHorizontal: 40 },
+  errorEmoji:     { fontSize: 40, marginBottom: 12 },
+  errorTitle:     { color: '#555', fontSize: 15, textAlign: 'center', marginBottom: 16 },
+  retryBtn:       { backgroundColor: '#131313', borderRadius: 14, paddingHorizontal: 24, paddingVertical: 12, borderWidth: 1, borderColor: '#1c1c1c' },
+  retryTxt:       { color: '#FF6B35', fontWeight: '600', fontSize: 14 },
   emptyBox:       { alignItems: 'center', marginTop: 80, paddingHorizontal: 40 },
   emptyEmoji:     { fontSize: 52, marginBottom: 16 },
   emptyTitle:     { color: '#444', fontSize: 17, fontWeight: '600', textAlign: 'center' },
   emptySub:       { color: '#2a2a2a', fontSize: 13, marginTop: 6, textAlign: 'center' },
 })
-
 

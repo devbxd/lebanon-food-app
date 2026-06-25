@@ -1,3 +1,5 @@
+import { Image } from 'expo-image'
+import * as ImagePicker from 'expo-image-picker'
 import { useRouter } from 'expo-router'
 import { useEffect, useRef, useState } from 'react'
 import {
@@ -5,6 +7,7 @@ import {
   Alert,
   Animated,
   Modal,
+  Platform,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -12,10 +15,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Platform,
 } from 'react-native'
-import * as ImagePicker from 'expo-image-picker'
-import { Image } from 'expo-image'
 import { useTranslation } from '../../lib/LanguageContext'
 import { LANGUAGES } from '../../lib/i18n'
 import { supabase } from '../../lib/supabase'
@@ -253,6 +253,25 @@ export default function ProfileScreen() {
             </TouchableOpacity>
 
 
+          </View>
+        </Animated.View>
+
+        {/* ── Légal ── */}
+        <Animated.View style={[s.section, { opacity: fadeAnim }]}>
+          <Text style={s.sectionLabel}>LÉGAL</Text>
+          <View style={s.card}>
+            <TouchableOpacity onPress={() => router.push('/privacy')} activeOpacity={0.75}>
+              <View style={s.menuRow}>
+                <View style={s.menuLeft}>
+                  <View style={s.menuIcon}><Text style={s.menuIconEmoji}>🔒</Text></View>
+                  <View>
+                    <Text style={s.menuTitle}>Confidentialité & CGU</Text>
+                    <Text style={s.menuSub}>Politique de confidentialité</Text>
+                  </View>
+                </View>
+                <Text style={s.chevron}>›</Text>
+              </View>
+            </TouchableOpacity>
           </View>
         </Animated.View>
 
@@ -554,3 +573,4 @@ const s = StyleSheet.create({
   langLabel: { color: '#666', fontSize: 15, fontWeight: '600', flex: 1 },
   activeDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: ORANGE },
 })
+

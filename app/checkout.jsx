@@ -9,7 +9,6 @@ import {
 import { useTranslation } from '../lib/LanguageContext'
 import { supabase } from '../lib/supabase'
 
-const WHISH_LINK = 'https://whish.money/pay/TON_LIEN_ICI'
 const ORANGE = '#FF6B35'
 const BG = '#0a0a0a'
 const CARD = '#111'
@@ -404,4 +403,3 @@ const s = StyleSheet.create({
   orderBtnPreorder: { backgroundColor: '#4a48a0', shadowColor: '#4a48a0' },
   orderBtnTxt:      { color: WHITE, fontSize: 17, fontWeight: '800', letterSpacing: -0.3 },
 })
-

@@ -405,6 +405,13 @@
     </div>
 
     <hr class="modal-divider">
+    <div class="modal-field">
+      <label>💳 Lien Whish Money (paiement en ligne)</label>
+      <input type="url" id="r-whish-url" placeholder="https://whish.money/pay/..." />
+      <div class="commission-hint">Les clients qui choisissent Whish seront redirigés vers ce lien. Le montant exact de la commande s'affiche automatiquement dans l'app.</div>
+    </div>
+
+    <hr class="modal-divider">
     <div class="modal-avail-row">
       <div class="modal-avail-label">
         Ouvert maintenant
@@ -1048,7 +1055,7 @@ function saveServiceKey() {
     document.getElementById('resto-modal-title').textContent = 'Ajouter un restaurant'
     document.getElementById('resto-modal-sub').textContent = 'Il apparaîtra immédiatement dans l\'app et dans le dashboard des restos.'
     document.getElementById('resto-save-btn').innerHTML = '<i class="ti ti-plus"></i> Ajouter le restaurant'
-    ;['r-name','r-desc','r-delivery-time','r-min-order','r-delivery-fee','r-image','r-address','r-phone'].forEach(id => document.getElementById(id).value = '')
+    ;['r-name','r-desc','r-delivery-time','r-min-order','r-delivery-fee','r-image','r-address','r-phone','r-whish-url'].forEach(id => document.getElementById(id).value = '')
     document.getElementById('r-category').value = ''
     document.getElementById('r-commission').value = DEFAULT_COMMISSION
     document.getElementById('r-is-open').checked = true
@@ -1072,6 +1079,7 @@ function saveServiceKey() {
     document.getElementById('r-image').value         = r.image_url || ''
     document.getElementById('r-address').value       = r.address || ''
     document.getElementById('r-phone').value         = r.phone || ''
+    document.getElementById('r-whish-url').value     = r.whish_url || ''
     document.getElementById('r-is-open').checked     = r.is_open !== false
     const preview = document.getElementById('r-img-preview')
     if (r.image_url) { preview.src = r.image_url; preview.classList.add('visible') } else preview.classList.remove('visible')
@@ -1101,7 +1109,8 @@ function saveServiceKey() {
       image_url:       document.getElementById('r-image').value.trim() || null,
       address:         document.getElementById('r-address').value.trim() || null,
       phone:           document.getElementById('r-phone').value.trim() || null,
-      is_open:         document.getElementById('r-is-open').checked
+      is_open:         document.getElementById('r-is-open').checked,
+      whish_url:       document.getElementById('r-whish-url').value.trim() || null
     }
     if (editingRestoId) {
       const { error } = await db.from('restaurants').update(payload).eq('id', editingRestoId)

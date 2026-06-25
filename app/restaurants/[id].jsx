@@ -22,6 +22,8 @@ export default function RestaurantScreen() {
   const router = useRouter()
   const [restaurant, setRestaurant] = useState(null)
   const [menuItems, setMenuItems] = useState([])
+  const [loadingData, setLoadingData] = useState(true)
+  const [fetchError, setFetchError] = useState(null)
   const [cart, setCart] = useState([])
   const [selectedOptions, setSelectedOptions] = useState({})
   const [activeCategory, setActiveCategory] = useState('Tout')
@@ -35,10 +37,13 @@ export default function RestaurantScreen() {
   useEffect(() => { fetchData() }, [])
 
   async function fetchData() {
-    const { data: resto } = await supabase.from('restaurants').select('*').eq('id', id).single()
+    setFetchError(null)
+    const { data: resto, error: restoErr } = await supabase.from('restaurants').select('*').eq('id', id).single()
     const { data: menu } = await supabase.from('menu_items').select('*').eq('restaurant_id', id).eq('available', true)
-    if (resto) setRestaurant(resto)
-    if (menu) setMenuItems(menu)
+    if (restoErr || !resto) { setFetchError('Restaurant introuvable ou erreur réseau'); setLoadingData(false); return }
+    setRestaurant(resto)
+    setMenuItems(menu || [])
+    setLoadingData(false)
   }
 
  const isOpen = restaurant?.is_open === true || restaurant?.is_open === 'true'
@@ -124,11 +129,30 @@ export default function RestaurantScreen() {
     })
   }
 
-  if (!restaurant) return (
+  if (loadingData) return (
     <View style={styles.loading}>
-      <Text style={styles.loadingText}>Chargement...</Text>
+      <View style={styles.skeletonHero} />
+      <View style={{padding:16,gap:12}}>
+        <View style={styles.skeletonTitle} />
+        <View style={styles.skeletonSub} />
+      </View>
     </View>
   )
+
+  if (fetchError) return (
+    <View style={styles.loading}>
+      <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+        <Text style={styles.backText}>←</Text>
+      </TouchableOpacity>
+      <Text style={{fontSize:36,marginBottom:12}}>⚠️</Text>
+      <Text style={{color:'#555',fontSize:15,textAlign:'center',marginBottom:20,paddingHorizontal:40}}>{fetchError}</Text>
+      <TouchableOpacity onPress={fetchData} style={{backgroundColor:'#1c1c1c',borderRadius:14,paddingHorizontal:24,paddingVertical:12}}>
+        <Text style={{color:'#FF6B35',fontWeight:'600'}}>Réessayer</Text>
+      </TouchableOpacity>
+    </View>
+  )
+
+  if (!restaurant) return null
 
   return (
     <View style={styles.container}>
@@ -528,6 +552,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF6B35', justifyContent: 'center', alignItems: 'center',
   },
   addBtnText: { color: '#fff', fontSize: 20, fontWeight: '700' },
+  skeletonHero: { width: '100%', height: 280, backgroundColor: '#1c1c1c' },
+  skeletonTitle: { height: 18, backgroundColor: '#1c1c1c', borderRadius: 9, width: '60%' },
+  skeletonSub: { height: 12, backgroundColor: '#161616', borderRadius: 6, width: '80%' },
 
   // Cart bar
   cartBar: {
